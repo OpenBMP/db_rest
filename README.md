@@ -126,8 +126,8 @@ Method | URI       | Parameters    | Description | Demo URL
 ------ | ----------| ------------- | ----------- | --------
 GET |  /db_rest/v1/asn_stats |  **limit** - Max results to return<br> | Returns a list of all active ASN's in the DB | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats)
 GET | /db_rest/v1/asn_stats/{asn} |  **limit** - Max results to return<br> | Returns the AS statistics for the provided ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/15169)
-GET |  /db_rest/v1/asn_stats/ipv6 | IPv4  **limit** - Max results to return<br> **topTransit=<number>** Get the top transit prefixes<br> **topOrigin=<number>** Get the top originating ASN's | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/ipv4?topOrigin=25)
-GET |  /db_rest/v1/asn_stats/ipv6 | IPv6  **limit** - Max results to return<br> **topTransit=<number>** Get the top transit prefixes<br> **topOrigin=<number>** Get the top originating ASN's | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/ipv6?topTransit=25)
+GET |  /db_rest/v1/asn_stats/ipv4 | IPv4  **limit** - Max results to return<br> **topTransit=<number>** Get the top transit prefixes<br> **topOrigin=<number>** Get the top originating ASN's | Get the top ASN's originating prefixes or that are transit to other ASN's | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/ipv4?topOrigin=25)
+GET |  /db_rest/v1/asn_stats/ipv6 | IPv6  **limit** - Max results to return<br> **topTransit=<number>** Get the top transit prefixes<br> **topOrigin=<number>** Get the top originating ASN's | Get the top ASN's originating prefixes or that are transit to other ASN's | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/ipv6?topTransit=25)
 
 
 

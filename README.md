@@ -142,6 +142,8 @@ GET | /db_rest/v1/whois/asn/{asn} |  **where** - SQL WHERE clause  | Returns the
 
 Build
 -----
+Source is available in [Github](https://github.com/OpenBMP/db_rest)
+
 To build the WAR file, run **mvn clean package**
 > You have to have maven 3 installed.  To install maven see [maven3](http://maven.apache.org/download.cgi)
 

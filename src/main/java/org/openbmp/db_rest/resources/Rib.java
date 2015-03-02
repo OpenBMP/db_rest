@@ -157,6 +157,8 @@ public class Rib {
 		else
 			where_str += " and LastModified >= date_sub(current_timestamp, interval 2 day)";
 		
+		where_str += " and LastModified <= current_timestamp ";
+		
 		if (where != null)
 			where_str += " and " + where;
 		

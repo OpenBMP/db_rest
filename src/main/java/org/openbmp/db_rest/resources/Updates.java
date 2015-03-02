@@ -57,7 +57,8 @@ public class Updates {
 	@Path("/top")
 	@Produces("application/json")
 	public Response getUpdatesTop(@QueryParam("limit") Integer limit, 
-			                    @QueryParam("hours") Integer hours) {
+			                    @QueryParam("hours") Integer hours,
+			                    @QueryParam("ts") String timestamp) {
 		
 		if (hours == null || hours >= 72 || hours < 1)
 			hours = 2;
@@ -65,14 +66,19 @@ public class Updates {
 		if (limit == null || limit > 100 || limit < 1)
 			limit = 25;
 		
+		if (timestamp == null || timestamp.length() < 1)
+			timestamp = "current_timestamp";
+		else
+			timestamp = "'" + timestamp + "'";
+		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT u.count as Count, rib.prefix as Prefix,rib.prefix_len as PrefixLen,\n");
 		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
 		query.append("    FROM\n");
 		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,timestamp\n");
 		query.append("                FROM path_attr_log path  FORCE INDEX (idx_ts)\n"); 
-		query.append("                WHERE path.timestamp >= date_sub(current_timestamp, interval " + hours + " hour) and\n");
-		query.append("                      path.timestamp <= current_timestamp\n");
+		query.append("                WHERE path.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) and\n");
+		query.append("                      path.timestamp <= " + timestamp + "\n");
 		query.append("                GROUP BY rib_hash_id\n");
 		query.append("                ORDER BY count DESC limit " + limit + "\n");
 		query.append("         ) u\n");
@@ -91,7 +97,8 @@ public class Updates {
 	@Path("/top/interval/{minutes}")
 	@Produces("application/json")
 	public Response getUpdatesTopInterval(@PathParam("minutes") Integer minutes,
-										  @QueryParam("limit") Integer limit) {
+										  @QueryParam("limit") Integer limit,
+										  @QueryParam("ts") String timestamp) {
 
 		if (limit == null || limit > 100 || limit < 1)
 			limit = 25;
@@ -101,13 +108,18 @@ public class Updates {
 			interval = minutes;
 		}
 		
+		if (timestamp == null || timestamp.length() < 1)
+			timestamp = "current_timestamp";
+		else
+			timestamp = "'" + timestamp + "'";
+		
 		StringBuilder query = new StringBuilder();
 		query.append("select from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " 
 								+ (interval * 60) + ") as IntervalTime,\n");
 		query.append("               count(rib_hash_id) as Count\n");
 		query.append("      FROM path_attr_log\n"); 
-		query.append("      WHERE timestamp >= date_sub(current_timestamp, interval " + 
-		 						(interval * limit) + " minute) and timestamp <= current_timestamp\n");
+		query.append("      WHERE timestamp >= date_sub(" + timestamp + ", interval " + 
+		 						(interval * limit) + " minute) and timestamp <= " + timestamp + "\n");
 		query.append("      GROUP BY IntervalTime\n");
 		query.append("      ORDER BY timestamp desc");
 		

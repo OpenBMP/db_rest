@@ -3,7 +3,7 @@ DB_REST - OpenBMP Database REST Service
 
 Simple DB REST interface to the OpenBMP database. This is an example of how to interact with the database. 
 
-<div style="color:blue; font-size:32px">Demo server is still in development, please bare with it.</div>
+<div style="color:blue; font-size:32px">Demo server is still in development.</div>
 
 
 JSON
@@ -124,7 +124,7 @@ Per ASN statistics
 
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
-GET |  /db_rest/v1/asn_stats |  **limit** - Max results to return<br> | Returns a list of all active ASN's in the DB | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats)
+GET |  /db_rest/v1/asn_stats |  **limit** - Max results to return<br> | Returns a list of all active ASN's in the DB | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats?limit=100)
 GET | /db_rest/v1/asn_stats/{asn} |  **limit** - Max results to return<br> | Returns the AS statistics for the provided ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/15169)
 GET |  /db_rest/v1/asn_stats/ipv4 | IPv4  **limit** - Max results to return<br> **topTransit=<number>** Get the top transit prefixes<br> **topOrigin=<number>** Get the top originating ASN's | Get the top ASN's originating prefixes or that are transit to other ASN's | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/ipv4?topOrigin=25)
 GET |  /db_rest/v1/asn_stats/ipv6 | IPv6  **limit** - Max results to return<br> **topTransit=<number>** Get the top transit prefixes<br> **topOrigin=<number>** Get the top originating ASN's | Get the top ASN's originating prefixes or that are transit to other ASN's | [Demo](http://demo.openbmp.org:8001/db_rest/v1/as_stats/ipv6?topTransit=25)
@@ -137,15 +137,17 @@ Whois information for ASN's
 
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
-GET | /db_rest/v1/whois/asn | **where** - SQL WHERE clause | Returns all whois information - **WARNING** will be a lot of data. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/whois/asn)
+GET | /db_rest/v1/whois/asn | **where** - SQL WHERE clause<p>**limit** - Max results to return | Returns all whois information | [Demo](http://demo.openbmp.org:8001/db_rest/v1/whois/asn?where=org_name like%20'%cisco%')
 GET | /db_rest/v1/whois/asn/{asn} |  **where** - SQL WHERE clause  | Returns the whois info for the given ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/whois/asn/16509)
 
 Build
 -----
 Source is available in [Github](https://github.com/OpenBMP/db_rest)
 
+Before building, edit the **src/main/webapp/META-INF/context.xml** file and change the settings to match your DB install (username, password, and hostname). 
+
 To build the WAR file, run **mvn clean package**
-> You have to have maven 3 installed.  To install maven see [maven3](http://maven.apache.org/download.cgi)
+> You have to have maven version 3 installed.  To install maven see [maven3](http://maven.apache.org/download.cgi)
 
 Install
 -------

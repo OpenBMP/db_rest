@@ -63,7 +63,7 @@ public class Downstream {
 					"{ \"error\": \"Missing required path parameter\" }").build();
 		
 		StringBuilder query = new StringBuilder();
-		query.append("select DownstreamAS,as_name,country,org_name\n");
+		query.append("select if(DownstreamAS = 0, 'SELF', DownStreamAS) as DownstreamAS,as_name,country,org_name\n");
 		query.append("   from (select distinct hash_id,peer_hash_id,cast(trim(substring_index(concat(");
 		query.append("             SUBSTRING_index(concat(as_path, ' '), ' " + asn + " ', -1), ' '), ' ', 1)) as unsigned) as DownstreamAS\n"); 
 		query.append("          from path_attrs PARTITION\n");
@@ -71,7 +71,6 @@ public class Downstream {
 		query.append("          group by as_path order by null\n");
 		query.append("        ) p join rib r on (p.hash_id = r.path_attr_hash_id) \n");
 		query.append("            left join gen_whois_asn w ON (p.DownstreamAS = w.asn)\n");
-	    query.append("    where DownstreamAS > 0\n");
 		query.append("    group by DownstreamAS\n");
 		query.append("    order by DownstreamAS\n");
 		
@@ -90,7 +89,7 @@ public class Downstream {
 					"{ \"error\": \"Missing required path parameter\" }").build();
 		
 		StringBuilder query = new StringBuilder();
-		query.append(" select DownstreamAS, count(prefix) as Prefixes_Learned,\n");
+		query.append(" select if(DownstreamAS = 0, 'SELF', DownStreamAS) as DownstreamAS, count(prefix) as Prefixes_Learned,\n");
 	    query.append("           as_name,country,org_name\n");			
 	    query.append("     from (select distinct hash_id,peer_hash_id,cast(trim(substring_index(concat(SUBSTRING_index(\n");
 	    query.append("               concat(as_path, ' '), ' "+asn+" ', -1), ' '), ' ', 1)) as unsigned) as DownstreamAS\n");
@@ -98,8 +97,7 @@ public class Downstream {
 	    query.append("            where as_path regexp '.* "+asn+"([ ]|$)+' ) p\n");
 	    query.append("        join rib r on (r.path_attr_hash_id = p.hash_id and r.peer_hash_id = p.peer_hash_id)\n");
 	    query.append("        left join gen_whois_asn w ON (p.DownstreamAS = w.asn)\n");
-	    query.append("     where DownstreamAS > 0\n");
-		query.append("    group by DownstreamAS\n");
+	    query.append("    group by DownstreamAS\n");
 		query.append("    order by DownstreamAS\n");
 		
 		

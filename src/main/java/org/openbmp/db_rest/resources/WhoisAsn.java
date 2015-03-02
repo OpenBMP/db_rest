@@ -61,21 +61,34 @@ public class WhoisAsn {
 
 	@GET
 	@Produces("application/json")
-	public Response getWhois(@QueryParam("where") String where) {
+	public Response getWhois(@QueryParam("where") String where,
+							 @QueryParam("limit") Integer limit) {
 		
 		if (where == null) {
-			System.out.println("Bad request");
+			System.out.println("Bad request, no where clause");
 			return Response.status(400).entity("")
 					.header("Access-Control-Allow-Origin", "*")
 					.header("Access-Control-Allow-Methods", "GET")
 					.allow("OPTIONS")
 					.build();
 		}
-			
-		String where_str = where;
+		
+		String limit_str = "";
+		if (limit != null && limit >= 1 && limit <= 500000)
+			limit_str += " limit " + limit;
+		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
+		query.append("    FROM gen_whois_asn w LEFT JOIN gen_asn_stats s ON (w.asn = s.asn)\n");
+		query.append("    WHERE ");
+		query.append(where);
+		query.append("    group by w.asn\n");
+		query.append(limit_str);
+	
+		System.out.println("QUERY: \n" + query.toString() + "\n");
 		
 		return RestResponse.okWithBody(
-				DbUtils.selectStar_DbToJson(mysql_ds, "gen_whois_asn", null, where_str, null));
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 		
 	@GET

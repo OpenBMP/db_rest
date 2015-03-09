@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -47,10 +47,30 @@ public class DbUtils {
 	 * @param limit			Max number of records to return
 	 * @param where			SQL Where string
 	 * @param orderby		SQL order by string
-	 * 
+	 *  
 	 * @return String Json formatted result
 	 */
 	static public String selectStar_DbToJson(DataSource ds, String tableName, Integer limit, String where, String orderby) {
+		
+		return selectStar_DbToJson(ds, tableName, limit, where, orderby, 0);
+	}
+	
+	/**
+	 * Return SELECT * FROM <tbl> in JSON format
+	 * 
+	 * 	Generic query to get all columns from a table based on passed WHERE and ORDER BY
+	 * 
+	 * @param ds			Datasource - must already be initialized, via context.xml or otherwise
+	 * @param tableName		Name of the table to query
+	 * @param limit			Max number of records to return
+	 * @param where			SQL Where string
+	 * @param orderby		SQL order by string
+	 * @param extraTimeInMs Method time to add to the overall query time in milliseconds
+	 * 
+	 * @return String Json formatted result
+	 */
+	static public String selectStar_DbToJson(DataSource ds, String tableName, Integer limit, String where, String orderby,
+					long extraTimeInMs) {
 		
 		String limit_st = " limit 1000";
 		String where_st = "";
@@ -73,10 +93,11 @@ public class DbUtils {
 		System.out.println("QUERY: " + select_query);
 	
 		// Run the query
-		output = select_DbToJson(ds, select_query);
+		output = select_DbToJson(ds, select_query, extraTimeInMs);
 		
 		return output;
 	}
+	
 	
 	/**
 	 * Return Select query in JSON format
@@ -89,6 +110,21 @@ public class DbUtils {
 	 * @return String Json formatted result
 	 */
 	static public String select_DbToJson(DataSource ds, String query) {
+		return select_DbToJson(ds, query, 0);
+	}
+	
+	/**
+	 * Return Select query in JSON format
+	 * 
+	 * 	 Select based query, should contain the SELECT statement. 
+	 * 
+	 * @param ds			Datasource - must already be initialized, via context.xml or otherwise
+	 * @param query			Full select query to run (including SELECT all the way to ORDER BY
+ 	 * @param extraTimeInMs Method time to add to the overall query time in milliseconds
+	 *
+	 * @return String Json formatted result
+	 */
+	static public String select_DbToJson(DataSource ds, String query, long extraTimeInMs) {
 		
 		String output = "{}";
 
@@ -105,7 +141,7 @@ public class DbUtils {
 			long fetchTime = System.currentTimeMillis();
 						
 			rs = stmt.executeQuery(query);
-			output = DbUtils.DbResultsToJson(rs, System.currentTimeMillis() - fetchTime);
+			output = DbUtils.DbResultsToJson(rs, (System.currentTimeMillis() - fetchTime) + extraTimeInMs);
             
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -126,6 +162,55 @@ public class DbUtils {
 		return output;
 	}
 	
+	/**
+	 * Return Select query in JSON format
+	 * 
+	 * 	 Select based query, should contain the SELECT statement. 
+	 * 
+	 * @param ds			Datasource - must already be initialized, via context.xml or otherwise
+	 * @param query			Full select query to run (including SELECT all the way to ORDER BY
+	 *
+	 * @return Map<String,List<DbColumnDef>> hash array of rows, each row is a list of columns
+	 * 			primary key for the HashMap is the value of the concat values of the row minus the
+	 * 			sum columns. 
+	 */
+	static public Map<String,List<DbColumnDef>> select_DbToMap(DataSource ds, String query) {
+		
+		Map<String,List<DbColumnDef>> results = new HashMap<String,List<DbColumnDef>>();
+
+		//
+		// Run the query
+		//
+		Connection conn = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		
+		try{
+			conn = ds.getConnection();
+			stmt = conn.createStatement();
+			//long fetchTime = System.currentTimeMillis();
+						
+			rs = stmt.executeQuery(query);
+			results = DbUtils.DbResultsToMap(rs, null);
+            
+		} catch (SQLException e) {
+			e.printStackTrace();
+			
+		} finally {
+			try {
+				if (rs != null)
+					rs.close();
+				if (stmt != null)
+					stmt.close();
+				if (conn != null)
+					conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	
+		return results;
+	}
 	
 	/**
 	 * Return Select query in JSON format (using partitions)
@@ -218,7 +303,7 @@ public class DbUtils {
         }
         
         /*
-         * Monitor active threads and start additionals up to max partitions
+         * Monitor active threads and start additional ones up to max partitions
          */
         while (currentPartition <= endPartitionNumber) {
         	for (int i=0; i < maxThreads; i++) {

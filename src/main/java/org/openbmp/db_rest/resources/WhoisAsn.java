@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -96,13 +96,22 @@ public class WhoisAsn {
 	@Produces("application/json")
 	public Response getWhoisAsn(@PathParam("asn") Integer asn,
 							  @QueryParam("where") String where) {
-		
+	
 		String where_str = " asn = " + asn;
 		if (where != null)
 			where_str += " and " + where;
 		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
+		query.append("    FROM gen_whois_asn w LEFT JOIN gen_asn_stats s ON (w.asn = s.asn)\n");
+		query.append("    WHERE ");
+		query.append(where);
+		query.append("    group by w.asn\n");
 	
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
 		return RestResponse.okWithBody(
-				DbUtils.selectStar_DbToJson(mysql_ds, "gen_whois_asn", null, where_str, null));
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
+		
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -7,6 +7,9 @@
  *
  */
 package org.openbmp.db_rest.resources;
+
+import java.util.List;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 import javax.naming.InitialContext;
@@ -22,6 +25,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.openbmp.db_rest.DbColumnDef;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
 
@@ -135,6 +139,51 @@ public class Rib {
 		
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+	}
+	
+	@GET
+	@Path("/lookup/{IP}")
+	@Produces("application/json")
+	public Response getRibByLookup(@PathParam("IP") String ip,
+						   @QueryParam("limit") Integer limit,
+						   @QueryParam("where") String where,
+						   @QueryParam("orderby") String orderby) {
+		
+		StringBuilder query = new StringBuilder();
+		
+		// Query first for the prefix/len
+		query.append("SELECT distinct prefix,prefix_len FROM rib force index (idx_range_prefix_bin)\n");
+		query.append("        WHERE prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
+		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
+        query.append("        ORDER BY prefix_bcast_bin limit 1\n");
+		
+		long startTime = System.currentTimeMillis();
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+        
+     	Map<String,List<DbColumnDef>> ResultsMap;
+     	ResultsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+        
+     	if (ResultsMap.size() <= 0) {
+     		// No results to return
+     		return RestResponse.okWithBody("{}");
+     	} 
+     	
+     	else {
+     		// Query v_routes for the prefix found
+     		String prefix = ResultsMap.entrySet().iterator().next().getValue().get(0).getValue();
+     		String prefix_len = ResultsMap.entrySet().iterator().next().getValue().get(1).getValue();
+     		
+     		StringBuilder where_str = new StringBuilder();
+     		where_str.append("prefix = \"" + prefix + "\"");
+     		where_str.append(" AND prefixlen = " + prefix_len);
+     				
+     		if (where != null)
+				where_str.append(" and " + where);
+			
+			return RestResponse.okWithBody(
+					DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str.toString(), orderby,
+							(System.currentTimeMillis() - startTime)));
+     	}
 	}
 	
 	@GET

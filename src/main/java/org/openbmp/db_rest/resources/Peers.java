@@ -222,7 +222,7 @@ public class Peers {
 	public Response getPeersPrefixLast(@QueryParam("last") Integer limit) {
 		
 		String tableName = "v_peer_prefix_report_last";
-		String orderBy = "BMP_Router,BGP_Peer";
+		String orderBy = "RouterName,PeerName";
 
 		if (limit != null) {
 			tableName = "v_peer_prefix_report";
@@ -242,7 +242,7 @@ public class Peers {
 			                                 @QueryParam("last") Integer limit) {
 		
 		String tableName = "v_peer_prefix_report_last";
-		String orderBy = "BMP_Router,BGP_Peer";
+		String orderBy = "RouterName,PeerName";
 
 		if (limit != null) {
 			tableName = "v_peer_prefix_report";
@@ -251,7 +251,7 @@ public class Peers {
 				
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, tableName, 
-						limit, "BGP_Peer like '" + peerIP + "%'", orderBy));
+						limit, "PeerName like '" + peerIP + "%'", orderBy));
 	}
 	
 }

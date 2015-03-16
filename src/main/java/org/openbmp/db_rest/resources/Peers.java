@@ -98,6 +98,20 @@ public class Peers {
 	}
 	
 	@GET
+	@Path("/router/{routerIP}")
+	@Produces("application/json")
+	public Response getPeersByRouterIp(@PathParam("routerIP") String routerIP,
+			                 @QueryParam("limit") Integer limit,
+						     @QueryParam("orderby") String orderby) {
+		
+		String where_str = " RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' ";
+		
+		return RestResponse.okWithBody(
+					DbUtils.selectStar_DbToJson(mysql_ds, "v_peers", limit, where_str, orderby));
+	}
+
+	
+	@GET
 	@Path("/asn/{peerASN}")
 	@Produces("application/json")
 	public Response getPeersByIp(@PathParam("peerASN") Integer asn,
@@ -131,6 +145,24 @@ public class Peers {
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
+
+	@GET
+	@Path("/type/count/router")
+	@Produces("application/json")
+	public Response getRouterPeersTypeCount() {
+
+
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT RouterName,RouterIP,if(isPeerVPN, 'VPN', if(isPeerIPv4, 'IPv4', 'IPv6')) as `IP-Type`,\n");
+		query.append("           count(peer_hash_id) as Count\n");
+		query.append("    FROM v_peers\n");
+		query.append("    GROUP BY RouterName,`IP-Type`");
+		
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
 	
 	@GET
 	@Path("/type/v4")
@@ -140,7 +172,7 @@ public class Peers {
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT * \n");
 		query.append("    FROM v_peers\n");
-		query.append("    WHERE PeerIP like '%.%'");
+		query.append("    WHERE isPeerIPv4 = 1'");
 		
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		
@@ -157,7 +189,7 @@ public class Peers {
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT * \n");
 		query.append("    FROM v_peers\n");
-		query.append("    WHERE PeerIP like '%:%'");
+		query.append("    WHERE isPeerIPv4 = 0");
 		
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		

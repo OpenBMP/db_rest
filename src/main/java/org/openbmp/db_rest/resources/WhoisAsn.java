@@ -97,16 +97,16 @@ public class WhoisAsn {
 	public Response getWhoisAsn(@PathParam("asn") Integer asn,
 							  @QueryParam("where") String where) {
 	
-		String where_str = " asn = " + asn;
+		String where_str = " gen_whois_asn.asn = " + asn;
 		if (where != null)
 			where_str += " and " + where;
 		
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
-		query.append("    FROM gen_whois_asn w LEFT JOIN gen_asn_stats s ON (w.asn = s.asn)\n");
+		query.append("SELECT gen_whois_asn.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
+		query.append("    FROM gen_whois_asn gen_whois_asn LEFT JOIN gen_asn_stats s ON (gen_whois_asn.asn = s.asn)\n");
 		query.append("    WHERE ");
-		query.append(where);
-		query.append("    group by w.asn\n");
+		query.append(where_str);
+		query.append("    group by gen_whois_asn.asn\n");
 	
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		

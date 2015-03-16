@@ -52,6 +52,7 @@ GET | /db_rest/v1/peer/localip/{localIP} | **limit** - Max results to return<br>
 GET | /db_rest/v1/peer/remoteip/{remoteIP} | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by remote/peer IP address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/remoteip/172.20.164.43)
 GET | /db_rest/v1/peer/asn/{Peer ASN} | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by Peer ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/asn/64555)
 GET | /db_rest/v1/peer/type/count | | Returns peer counts by status IP version type | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/count)
+GET | /db_rest/v1/peer/type/count/router | | Returns a list of routers with count of peers by IP Type| [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/count/router)
 GET | /db_rest/v1/peer/type/v4 | | Returns list of IPv4 peers  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/v4)
 GET | /db_rest/v1/peer/type/v6 | | Returns list of IPv6 peers  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/v6)
 GET | /db_rest/v1/peer/status/count | | Returns peer counts by peer status  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/count)
@@ -59,6 +60,10 @@ GET | /db_rest/v1/peer/status/up | | Returns a list of BGP peers that are UP | [
 GET | /db_rest/v1/peer/status/down | | Returns a list of BGP peers that are DOWN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/down)
 GET | /db_rest/v1/peer/prefix | | Returns a list of BGP peers and their Pre-Policy and Post-Policy RIB counts. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/prefix)
 GET | /db_rest/v1/peer/prefix/{peerIP} | | Returns a list of BGP peers and their Pre-Policy and Post-Policy RIB counts by peer address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/prefix/172.20.164.43)
+GET | /db_rest/v1/peer/router/{Router IP} | **limit** - Max results to return<br>**orderby** - SQL ORDER BY clause | Returns a list of BGP peers based on Router IP or Router Name| [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/router/10.22.165.140)
+
+
+
 
 ### RIB
 Unicast IPv4/IPv6 RIB/routes view. 

@@ -62,7 +62,8 @@ public class Routers {
 		StringBuilder query = new StringBuilder();
 		query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
 		query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
-		query.append("           term_reason_text as LastTermReason, init_data as InitData\n");
+		query.append("           term_reason_text as LastTermReason, init_data as InitData,\n");
+		query.append("           timestamp as LastModified\n");
 		query.append("    FROM routers\n");
 		
 		String limit_st = " limit 1000";

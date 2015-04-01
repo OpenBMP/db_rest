@@ -153,6 +153,60 @@ Method | URI       | Parameters    | Description | Demo URL
 ------ | ----------| ------------- | ----------- | --------
 GET | /db_rest/v1/geoip/{IP} | **where** - SQL WHERE clause| Returns the geolocation data based on the IP supplied | [Demo](http://demo.openbmp.org:8001/db_rest/v1/geoip/72.163.4.161)
 
+### BGP-LS Information
+BGP-LS general/raw link state DB information
+
+Method | URI       | Parameters    | Description | Demo URL                      
+------ | ----------| ------------- | ----------- | --------
+GET | /db_rest/v1/linkstate/nodes | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the list of link state nodes | [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/nodes)
+GET | /db_rest/v1/linkstate/nodes/peer/{peerHashId} | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the list of link state nodes for the given **peer hash id** </p>*Get the peer hash ID by listing the nodes.*| [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/nodes/peer/daaa681792b33e36166a2205be05868d)
+GET | /db_rest/v1/linkstate/nodes/peer/{peerHashId}/{nodeHashId} | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the the specific node by **peer hash id** and **node hash id**  </p>*Get the node and peer hash ID by listing the nodes.*| [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/nodes/peer/daaa681792b33e36166a2205be05868d/08625b6f7dea7ecc5a559b77afdb458a)
+GET | /db_rest/v1/linkstate/links | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the list of link state links | [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/links)
+GET | /db_rest/v1/linkstate/links/peer/{peerHashId} | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the list of link state links for given **peer hash id**| [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/links/peer/daaa681792b33e36166a2205be05868d)
+GET | /db_rest/v1/linkstate/prefixes | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the list of link state prefixes | [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/prefixes)
+GET | /db_rest/v1/linkstate/prefixes/peer/{peerHashId} | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Returns the list of link state prefixes for given **peer hash id**| [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/prefixes/peer/daaa681792b33e36166a2205be05868d)
+
+### BGP-LS SPF Information
+BGP-LS shortest path first (SPF) information.  
+
+Running any GET below will result in a SPF generated routing table rooted at the given 
+router id.  IS-IS will have a router ID as well, so we use router id regardless of
+OSPF or IS-IS.   This keeps it consistent between the two. 
+
+In order to ensure that fast/repeated queries do not result in running SPF's when there's no change, there is a built in timer that will only generate a new RIB for the given protocol and router ID at most every 15 seconds.
+
+> SPF's are calculated on a per-BGP-peer basis.  A single BGP peer provides all link state
+> information so the SPF does not need to span multiple bgp-ls peers.  You should first run a
+> **GET /db_rest/v1/linkstate/nodes** to identify which peer and node you would like
+> to run the SPF against.  
+
+Method | URI       | Parameters    | Description | Demo URL                      
+------ | ----------| ------------- | ----------- | --------
+GET | /db_rest/v1/linkstate/spf/peer/{peerHashId}/ospf/{routerId} | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Runs **OSPF** SPF and generates a RIB for the given bgp-ls peer and router-id.  The generated RIB is returned. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/spf/peer/54ecaeeec115457cbce466ff48857aa7/ospf/100.1.1.2)
+GET | /db_rest/v1/linkstate/spf/peer/{peerHashId}/isis/{routerId} | **where** - SQL WHERE clause<br> **limit** - Limit the number of results<br> **orderby** - Order by clause| Runs **IS-IS** SPF and generates a RIB for the given bgp-ls peer and router-id.  The generated RIB is returned. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/linkstate/spf/peer/daaa681792b33e36166a2205be05868d/isis/200.1.1.1)
+
+#### Drawing the topology
+The returned result will contain two path columns/fields.  
+
+* **path_hash_ids** - Comma delimited list of node hash ID's  
+* **path_router_ids** - Comma delimited list of node router ID's
+
+The **first entry** in the path will always be the **root node**.  For example, if the SPF was ran for 200.1.1.1, then 200.1.1.1 will be the first path entry.  The **last entry** in the path will always be the **node** where the prefix **originates**.  
+
+```
+{
+   prefix: "100.1.1.4/32",
+   Type: "0",
+   metric: 21,
+   src_router_id: "100.1.1.4",
+   nei_router_id: "100.1.1.3",
+   path_router_ids: "100.1.1.2,100.1.1.3,100.1.1.4",
+   path_hash_ids: "0ec92251bd07fc3a917ace4fcc564c83,d9ea9b11a9c9e2a9e91acfb91711f4a8,af17bf43842d5bac5702c5971334cce0",
+   neighbor_addr: "192.168.1.10",
+   peer_hash_id: "54ecaeeec115457cbce466ff48857aa7"
+}
+```
+
 Build
 -----
 Source is available in [Github](https://github.com/OpenBMP/db_rest)

@@ -8,6 +8,7 @@
  */
 package org.openbmp.db_rest;
 
+import java.awt.Window.Type;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigInteger;
@@ -408,6 +409,8 @@ public class DbUtils {
 							case Types.BIGINT:
 							case Types.INTEGER:
 							case Types.DECIMAL:
+							case Types.TINYINT:
+							case Types.SMALLINT:
 								value_int = new BigInteger(aggListMap.get(row.getKey()).get(sumColumns.get(i)).getValue());
 								value_int = value_int.add(new BigInteger(cols.get(sumColumns.get(i)).getValue()));
 								aggListMap.get(row.getKey()).get(sumColumns.get(i)).setValue(value_int.toString());
@@ -493,6 +496,7 @@ public class DbUtils {
 							jgen.writeNumber(new BigInteger(cols.get(i).getValue()));
 							break;
 							
+						case Types.TINYINT:
 						case Types.INTEGER:
 							jgen.writeNumber(new Integer(cols.get(i).getValue()));
 							break;
@@ -563,7 +567,13 @@ public class DbUtils {
 			JsonGenerator jgen = jfac.createJsonGenerator(swriter);
 			
 			jgen.writeStartObject(); // Root object
-			jgen.writeObjectFieldStart(meta.getTableName(1));
+			if (meta.getTableName(1).length() > 0)
+				jgen.writeObjectFieldStart(meta.getTableName(1));
+			else if (meta.getColumnCount() > 1 && meta.getTableName(2).length() > 0)
+				jgen.writeObjectFieldStart(meta.getTableName(2));
+			else
+				jgen.writeObjectFieldStart("table");
+			
 			//jgen.writeObjectFieldStart("data");
 			jgen.writeNumberField("cols", meta.getColumnCount());
 
@@ -583,6 +593,10 @@ public class DbUtils {
 					
 						case Types.BIGINT:
 							jgen.writeNumber(db_results.getBigDecimal(i));
+							break;
+							
+						case Types.TINYINT:
+							jgen.writeNumber(db_results.getShort(i));
 							break;
 							
 						case Types.INTEGER:

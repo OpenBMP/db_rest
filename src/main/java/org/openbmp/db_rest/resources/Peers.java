@@ -179,6 +179,25 @@ public class Peers {
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
+	
+	@GET
+	@Path("/router/{routerIP}/type/v4")
+	@Produces("application/json")
+	public Response getPeersTypeV4ByRouter(@PathParam("routerIP") String routerIP) {
+
+		String where_str = "( RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' )";
+		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT * \n");
+		query.append("    FROM v_peers\n");
+		query.append("    WHERE isPeerIPv4 = 1 and ");
+		query.append(where_str);
+		
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
 
 	@GET
 	@Path("/type/v6")
@@ -190,6 +209,26 @@ public class Peers {
 		query.append("SELECT * \n");
 		query.append("    FROM v_peers\n");
 		query.append("    WHERE isPeerIPv4 = 0");
+		
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
+	
+	
+	@GET
+	@Path("/router/{routerIP}/type/v6")
+	@Produces("application/json")
+	public Response getPeersTypeV6ByRouter(@PathParam("routerIP") String routerIP) {
+
+		String where_str = "( RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' )";
+		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT * \n");
+		query.append("    FROM v_peers\n");
+		query.append("    WHERE isPeerIPv4 = 0 and ");
+		query.append(where_str);
 		
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		

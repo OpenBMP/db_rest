@@ -172,7 +172,7 @@ public class Peers {
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT * \n");
 		query.append("    FROM v_peers\n");
-		query.append("    WHERE isPeerIPv4 = 1'");
+		query.append("    WHERE isPeerIPv4 = 1");
 		
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		

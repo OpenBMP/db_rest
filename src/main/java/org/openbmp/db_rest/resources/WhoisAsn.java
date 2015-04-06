@@ -79,8 +79,15 @@ public class WhoisAsn {
 		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
-		query.append("    FROM gen_whois_asn w LEFT JOIN gen_asn_stats s ON (w.asn = s.asn)\n");
-		query.append("    WHERE ");
+		query.append("    FROM gen_whois_asn w LEFT JOIN \n");
+        query.append("         gen_asn_stats s ON (w.asn = s.asn) JOIN\n");
+        query.append("            (select max(s.timestamp) as ts FROM gen_asn_stats s JOIN gen_whois_asn w\n");
+        query.append("                ON (s.asn = w.asn)\n");
+        query.append("                WHERE ");
+        query.append(where);
+        query.append("                GROUP BY s.asn ) s_last\n");
+        query.append("        ON (s.timestamp = s_last.ts)\n");
+        query.append("    WHERE ");
 		query.append(where);
 		query.append("    group by w.asn\n");
 		query.append(limit_str);
@@ -103,7 +110,9 @@ public class WhoisAsn {
 		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT gen_whois_asn.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
-		query.append("    FROM gen_whois_asn gen_whois_asn LEFT JOIN gen_asn_stats s ON (gen_whois_asn.asn = s.asn)\n");
+		query.append("    FROM gen_whois_asn gen_whois_asn LEFT JOIN ");
+		query.append("               (select * FROM gen_asn_stats WHERE asn = " + asn + " order by timestamp desc limit 1) s\n");
+		query.append("               ON (gen_whois_asn.asn = s.asn)\n");
 		query.append("    WHERE ");
 		query.append(where_str);
 		query.append("    group by gen_whois_asn.asn\n");

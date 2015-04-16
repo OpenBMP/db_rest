@@ -94,6 +94,48 @@ public class Updates {
 	}
 	
 	@GET
+	@Path("/peer/{peerHashId}/top")
+	@Produces("application/json")
+	public Response getUpdatesTopByPeer(@PathParam("peerHashId") String peerHashId,
+							    @QueryParam("limit") Integer limit, 
+			                    @QueryParam("hours") Integer hours,
+			                    @QueryParam("ts") String timestamp) {
+		
+		if (hours == null || hours >= 72 || hours < 1)
+			hours = 2;
+		
+		if (limit == null || limit > 100 || limit < 1)
+			limit = 25;
+		
+		if (timestamp == null || timestamp.length() < 1)
+			timestamp = "current_timestamp";
+		else
+			timestamp = "'" + timestamp + "'";
+		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT u.count as Count, rib.prefix as Prefix,rib.prefix_len as PrefixLen,\n");
+		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
+		query.append("    FROM\n");
+		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,path.timestamp\n");
+		query.append("                FROM path_attr_log path  FORCE INDEX (idx_ts)\n"); 
+		query.append("                WHERE path.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) and\n");
+		query.append("                      path.timestamp <= " + timestamp + "\n");
+		query.append("                GROUP BY rib_hash_id\n");
+		query.append("                ORDER BY count DESC limit " + limit + "\n");
+		query.append("         ) u\n");
+		query.append("         JOIN rib ON (u.rib_hash_id = rib.hash_id)\n");
+		query.append("         JOIN bgp_peers p ON (rib.peer_hash_id = p.hash_id)\n");
+		query.append("         JOIN routers r on (r.hash_id = p.router_hash_id)\n");
+		query.append("    WHERE rib.peer_hash_id = '" + peerHashId + "'\n");
+		query.append("         ORDER BY u.count DESC\n");
+		
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
+	
+	@GET
 	@Path("/top/interval/{minutes}")
 	@Produces("application/json")
 	public Response getUpdatesTopInterval(@PathParam("minutes") Integer minutes,
@@ -129,5 +171,41 @@ public class Updates {
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 	
-	
+	@GET
+	@Path("/peer/{peerHashId}/top/interval/{minutes}")
+	@Produces("application/json")
+	public Response getUpdatesTopIntervalByPeer(@PathParam("peerHashId") String peerHashId,
+										  @PathParam("minutes") Integer minutes,
+										  @QueryParam("limit") Integer limit,
+										  @QueryParam("ts") String timestamp) {
+
+		if (limit == null || limit > 100 || limit < 1)
+			limit = 25;
+		
+		Integer interval = 5;
+		if (minutes >= 1 && minutes <= 300) {
+			interval = minutes;
+		}
+		
+		if (timestamp == null || timestamp.length() < 1)
+			timestamp = "current_timestamp";
+		else
+			timestamp = "'" + timestamp + "'";
+		
+		StringBuilder query = new StringBuilder();
+		query.append("select from_unixtime(unix_timestamp(path_attr_log.timestamp) - unix_timestamp(path_attr_log.timestamp) % " 
+								+ (interval * 60) + ") as IntervalTime,\n");
+		query.append("               count(rib_hash_id) as Count\n");
+		query.append("      FROM path_attr_log JOIN path_attrs ON (path_attr_log.path_attr_hash_id = path_attrs.hash_id)\n"); 
+		query.append("      WHERE path_attr_log.timestamp >= date_sub(" + timestamp + ", interval " + 
+		 						(interval * limit) + " minute) and path_attr_log.timestamp <= " + timestamp + "\n");
+		query.append("          AND peer_hash_id = '" + peerHashId + "'\n");
+		query.append("      GROUP BY IntervalTime\n");
+		query.append("      ORDER BY path_attr_log.timestamp desc");
+		
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
 }

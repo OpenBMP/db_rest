@@ -37,7 +37,7 @@ BMP Router view.
 
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
-GET | /db_rest/v1/routers | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns the list of BMP routers currently known in the database | [Demo](http://demo.openbmp.org:8001/db_rest/v1/routers)
+GET | /db_rest/v1/routers | **withgeo** - Adds the geo location columns for router based on the router IP address<br> **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns the list of BMP routers currently known in the database | [Demo](http://demo.openbmp.org:8001/db_rest/v1/routers)
 GET | /db_rest/v1/routers/status/count | | Returns a count of DOWN and UP BMP routers | [Demo](http://demo.openbmp.org:8001/db_rest/v1/routers/status/count)
 GET | /db_rest/v1/routers/status/up | | Returns the BMP routers that are up | [Demo](http://demo.openbmp.org:8001/db_rest/v1/routers/status/up)
 GET | /db_rest/v1/routers/status/down | | Returns the BMP routers that are down | [Demo](http://demo.openbmp.org:8001/db_rest/v1/routers/status/down)
@@ -47,20 +47,20 @@ BGP Peer view.
 
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
-GET | /db_rest/v1/peer | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer)
-GET | /db_rest/v1/peer/localip/{localIP} | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by local IP address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/localip/10.22.165.141)
-GET | /db_rest/v1/peer/remoteip/{remoteIP} | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by remote/peer IP address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/remoteip/172.20.164.43)
-GET | /db_rest/v1/peer/asn/{Peer ASN} | **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by Peer ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/asn/64555)
+GET | /db_rest/v1/peer | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer)
+GET | /db_rest/v1/peer/localip/{localIP} | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by local IP address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/localip/10.22.165.141)
+GET | /db_rest/v1/peer/remoteip/{remoteIP} | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by remote/peer IP address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/remoteip/172.20.164.43)
+GET | /db_rest/v1/peer/asn/{Peer ASN} | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> **limit** - Max results to return<br>**where** - SQL WHERE clause<br> **orderby** - SQL ORDER BY clause | Returns a list of BGP peers by Peer ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/asn/64555)
 GET | /db_rest/v1/peer/type/count | | Returns peer counts by status IP version type | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/count)
 GET | /db_rest/v1/peer/type/count/router | | Returns a list of routers with count of peers by IP Type| [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/count/router)
-GET | /db_rest/v1/peer/type/v4 | | Returns list of IPv4 peers  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/v4)
-GET | /db_rest/v1/peer/type/v6 | | Returns list of IPv6 peers  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/v6)
+GET | /db_rest/v1/peer/type/v4 | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> | Returns list of IPv4 peers  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/v4)
+GET | /db_rest/v1/peer/type/v6 | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> | Returns list of IPv6 peers  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/type/v6)
 GET | /db_rest/v1/peer/status/count | | Returns peer counts by peer status  | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/count)
-GET | /db_rest/v1/peer/status/up | | Returns a list of BGP peers that are UP | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/up)
-GET | /db_rest/v1/peer/status/down | | Returns a list of BGP peers that are DOWN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/down)
+GET | /db_rest/v1/peer/status/up | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> | Returns a list of BGP peers that are UP | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/up)
+GET | /db_rest/v1/peer/status/down | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> | Returns a list of BGP peers that are DOWN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/status/down)
 GET | /db_rest/v1/peer/prefix | | Returns a list of BGP peers and their Pre-Policy and Post-Policy RIB counts. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/prefix)
 GET | /db_rest/v1/peer/prefix/{peerIP} | | Returns a list of BGP peers and their Pre-Policy and Post-Policy RIB counts by peer address | [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/prefix/172.20.164.43)
-GET | /db_rest/v1/peer/router/{Router IP} | **limit** - Max results to return<br>**orderby** - SQL ORDER BY clause | Returns a list of BGP peers based on Router IP or Router Name| [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/router/10.22.165.140)
+GET | /db_rest/v1/peer/router/{Router IP} | **withgeo** - Adds the geo location columns for the peer based on the peer IP address<br> **limit** - Max results to return<br>**orderby** - SQL ORDER BY clause | Returns a list of BGP peers based on Router IP or Router Name| [Demo](http://demo.openbmp.org:8001/db_rest/v1/peer/router/10.22.165.140)
 
 
 
@@ -88,9 +88,9 @@ List the upstream ASN's for the given ASN.  This query simply looks at the AS PA
 
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
-GET |  /db_rest/v1/upstream/{asn} | | List all upstream ASN's for the given ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/upstream/16509)
-GET |  /db_rest/v1/upstream/{asn}/count | | List all upstream ASN's for the given ASN and count the number of distinct prefixes (each prefix/len + peer is counted) | [Demo](http://demo.openbmp.org:8001/db_rest/v1/upstream/16509/count)
-GET |  /db_rest/v1/upstream/{asn}/peer/count | | List all upstream ASN's for the given ASN and count the number of distinct prefixes per peer | [Demo](http://demo.openbmp.org:8001/db_rest/v1/upstream/16509/peer/count)
+GET |  /db_rest/v1/upstream/{asn} |  | List all upstream ASN's for the given ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/upstream/16509)
+GET |  /db_rest/v1/upstream/{asn}/count |  | List all upstream ASN's for the given ASN and count the number of distinct prefixes (each prefix/len + peer is counted) | [Demo](http://demo.openbmp.org:8001/db_rest/v1/upstream/16509/count)
+GET |  /db_rest/v1/upstream/{asn}/peer/count |  | List all upstream ASN's for the given ASN and count the number of distinct prefixes per peer | [Demo](http://demo.openbmp.org:8001/db_rest/v1/upstream/16509/peer/count)
 
 ### Downstream BGP ASN's (peers)
 List the downstream ASN's for the given ASN.  This query simply looks at the AS PATH and parses out the RIGHT most ASN next to the ASN provided.  This will return a an empty ASN which is for itself. 
@@ -106,6 +106,7 @@ Method | URI       | Parameters    | Description | Demo URL
 GET |  /db_rest/v1/downstream/{asn} | | List all downstream ASN's for the given ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/downstream/16509')
 GET |  /db_rest/v1/downstream/{asn}/count | | List all downstream ASN's for the given ASN and count the number of distinct prefixes (each prefix/len + peer is counted) | [Demo](http://demo.openbmp.org:8001/db_rest/v1/downstream/16509/count)
 GET |  /db_rest/v1/downstream/{asn}/peer/count | | List all downstream ASN's for the given ASN and count the number of distinct prefixes per peer | [Demo](http://demo.openbmp.org:8001/db_rest/v1/downstream/16509/peer/count)
+GET |  /db_rest/v1/downstream/peer/{peerHashId} | | Distinctly lists the ASN's that are directly to the right of the peer ASN. E.g. ASPath's { "10 20, 30", "10 9 8"}  would produce a list containing 20 and 9 since those ASNs are to the right of the peering ASN of 10.   Each AS will have the ASN name, organization, and country.   | [Demo](http://demo.openbmp.org:8001/db_rest/v1/downstream/peer/c33f36c12036e98d89ae3ea54cce0be2)
 
 ### Updates Over Time
 Each update is logged.  Attributes that vary by router/peer/prefix will get an update log entry.
@@ -113,7 +114,9 @@ Each update is logged.  Attributes that vary by router/peer/prefix will get an u
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
 GET | /db_rest/v1/updates/top | **limit** - Max results to return<br> **hours** - Number of hours to include in top | Return the top prefixes by number of updates in past 'hours'.   Limit defaults to 25 and hours defaults to 2. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/updates/top?limit=15)
+GET | /db_rest/v1/updates/peer/{peerHashId}/top | **limit** - Max results to return<br> **hours** - Number of hours to include in top | For given peer, return the top prefixes by number of updates in past 'hours'.   Limit defaults to 25 and hours defaults to 2. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/updates/peer/c33f36c12036e98d89ae3ea54cce0be2/top?limit=15)
 GET | /db_rest/v1/updates/top/interval/{minutes} | **minutes** - Interval in minutes<br> **limit** - Max results to return<br> **hours** - Number of hours to include in top | Return the count of updates per interval for up to max limit size. Limit defaults to 25. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/updates/top/interval/5)
+GET | /db_rest/v1/updates/peer/{peerHashId}/top/interval/{minutes} | **minutes** - Interval in minutes<br> **limit** - Max results to return<br> **hours** - Number of hours to include in top | For given peer, return the count of updates per interval for up to max limit size. Limit defaults to 25. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/updates/peer/c33f36c12036e98d89ae3ea54cce0be2/top/interval/5)
 
 
 
@@ -123,7 +126,9 @@ Each prefix withdrawn is logged.
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
 GET | /db_rest/v1/withdrawns/top | **limit** - Max results to return<br> **hours** - Number of hours to include in top | Return the top prefixes by number of prefixes withdrawn in past 'hours'.   Limit defaults to 25 and hours defaults to 2. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/withdrawns/top?limit=15)
+GET | /db_rest/v1/withdrawns/peer/{peerHashId}/top | **limit** - Max results to return<br> **hours** - Number of hours to include in top | For given peer, return the top prefixes by number of prefixes withdrawn in past 'hours'.   Limit defaults to 25 and hours defaults to 2. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/withdrawns/peer/c33f36c12036e98d89ae3ea54cce0be2/top?limit=15)
 GET | /db_rest/v1/withdrawns/top/interval/{minutes} | **minutes** - Interval in minutes<br> **limit** - Max results to return<br> **hours** - Number of hours to include in top | Return the count of updates per interval for up to max limit size. Limit defaults to 25. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/withdrawns/top/interval/5)
+GET | /db_rest/v1/withdrawns/peer/{peerHashId}/top/interval/{minutes} | **minutes** - Interval in minutes<br> **limit** - Max results to return<br> **hours** - Number of hours to include in top | Return the count of updates per interval for up to max limit size. Limit defaults to 25. | [Demo](http://demo.openbmp.org:8001/db_rest/v1/withdrawns/peer/c33f36c12036e98d89ae3ea54cce0be2/top/interval/5)
 
 ### AS Stastistics
 Per ASN statistics
@@ -144,6 +149,7 @@ Whois information for ASN's
 Method | URI       | Parameters    | Description | Demo URL                      
 ------ | ----------| ------------- | ----------- | --------
 GET | /db_rest/v1/whois/asn | **where** - SQL WHERE clause<p>**limit** - Max results to return | Returns all whois information | [Demo](http://demo.openbmp.org:8001/db_rest/v1/whois/asn?where=org_name like%20'%cisco%')
+GET | /db_rest/v1/whois/asn/count | **where** - SQL WHERE clause<p> | Returns the count of ASN matches based on WHERE clause | [Demo](http://demo.openbmp.org:8001/db_rest/v1/whois/asn/count?where=org_name like%20'%cisco%')
 GET | /db_rest/v1/whois/asn/{asn} |  **where** - SQL WHERE clause  | Returns the whois info for the given ASN | [Demo](http://demo.openbmp.org:8001/db_rest/v1/whois/asn/16509)
 
 ### Geolocation IP Information

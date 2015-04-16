@@ -55,17 +55,26 @@ public class Routers {
 	@GET
 	@Produces("application/json")
 	public Response getRouters(@QueryParam("limit") Integer limit,
+							 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
 		
-		
 		StringBuilder query = new StringBuilder();
-		query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
-		query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
-		query.append("           term_reason_text as LastTermReason, init_data as InitData,\n");
-		query.append("           timestamp as LastModified\n");
-		query.append("    FROM routers\n");
+		if (withGeo == null) {
+			query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
+			query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
+			query.append("           term_reason_text as LastTermReason, init_data as InitData,\n");
+			query.append("           timestamp as LastModified\n");
+			query.append("    FROM routers\n");
 		
+		} else {
+			query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
+			query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
+			query.append("           term_reason_text as LastTermReason, init_data as InitData,\n");
+			query.append("           timestamp as LastModified, v_geo_ip.*\n");
+			query.append("    FROM routers LEFT JOIN v_geo_ip ON (v_geo_ip.ip_start_bin = routers.geo_ip_start)");
+		}
+
 		String limit_st = " limit 1000";
 		String where_st = "";
 		String orderby_st = "";
@@ -88,7 +97,8 @@ public class Routers {
 		
 		return RestResponse.okWithBody(DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-
+	
+	
 	@GET
 	@Path("/status/count")
 	@Produces("application/json")

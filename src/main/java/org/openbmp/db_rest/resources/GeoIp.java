@@ -61,13 +61,17 @@ public class GeoIp {
 		
 		StringBuilder query = new StringBuilder();
 		
+		String addrType = "ipv4";
+		if (ip.indexOf(':') >= 0)
+			addrType = "ipv6";
+		
 		// Query first for the prefix/len
 		query.append("SELECT * FROM v_geo_ip\n");
 		query.append("        WHERE ip_end_bin >= inet6_aton('" + ip + "')\n");
-		query.append("               and ip_start_bin <= inet6_aton('" + ip + "')\n ");
+		query.append("               and ip_start_bin <= inet6_aton('" + ip + "') and addr_type = '" + addrType + "'\n ");
 		
 		if (where != null)
-        	query.append(where);
+        	query.append(" AND " + where);
 		
 		query.append("        ORDER BY ip_end_bin limit 1\n ");
         

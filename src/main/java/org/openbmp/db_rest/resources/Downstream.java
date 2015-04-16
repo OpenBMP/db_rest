@@ -19,6 +19,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -142,6 +143,36 @@ public class Downstream {
 		includeColumns.add(3);
 		return RestResponse.okWithBody(
 					DbUtils.selectPartitions_DbToJson("downstreamASNPeerCount", mysql_ds, query.toString(), 0, 47, includeColumns));
+	}
+
+	@GET
+	@Path("/peer/{peerHashId}")
+	@Produces("application/json")
+	public Response getDownstreamPeer(@PathParam("peerHashId") String peerHashId,
+			 					  @QueryParam("limit") Integer limit) {
+		if (peerHashId == null)
+			return Response.status(400).entity(
+					"{ \"error\": \"Missing required paramter of peerHashId\" }").build();
+		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT DownstreamAS,as_name,country,org_name,peer_as as PeerASN\n");
+	    query.append("    FROM (SELECT peer_as,cast(trim(substring_index(concat(\n");
+	    query.append("             SUBSTRING_index(concat(as_path, ' '),\n");
+	    query.append("                concat(' ', peer_as, ' '), -1), ' '), ' ', 1)) as unsigned) as DownstreamAS, as_path\n");
+	    query.append("        FROM path_attrs \n");
+	    query.append("               JOIN bgp_peers ON (path_attrs.peer_hash_id = bgp_peers.hash_id)\n");
+	    query.append("        WHERE peer_hash_id = '" + peerHashId + "' and as_path_count > 1\n");
+	    query.append("        GROUP BY DownstreamAS order by null) peerDownstreamASN\n"); 
+	    query.append("    LEFT JOIN gen_whois_asn w ON (peerDownstreamASN.DownstreamAS = w.asn)\n");
+	    query.append("    ORDER BY DownstreamAS\n");
+	    
+	    if (limit != null)
+	    	query.append(" LIMIT " + limit);
+
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+				DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 	
 }

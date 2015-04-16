@@ -228,22 +228,33 @@ public class DbUtils {
 	 * @param startPartitionNumber  Starting partition number (e.g. 0), null will equal 0
 	 * @param endPartitionNumber    Ending partition number (e.g. 31), null will equal 31
 	 * @param sumColumns            Array of integers identifying the column number to sum (column must type int)
+	 * @param limit                 Limit the results to specific amount
 	 *
 	 * @return String Json formatted result
 	 */
 	static public String selectPartitions_DbToJson(String tableName, DataSource ds, String query, 
-				Integer startPartitionNumber, Integer endPartitionNumber, List<Integer> sumColumns) {
+				Integer startPartitionNumber, Integer endPartitionNumber, List<Integer> sumColumns, Integer limit) {
 
 		long startTime = System.currentTimeMillis();
 	    
 		Map<String,List<DbColumnDef>> AggRows;
 		
 		
-		AggRows = selectPartitions_DbToMap(ds, query, null, startPartitionNumber, endPartitionNumber, sumColumns);
+		AggRows = selectPartitions_DbToMap(ds, query, limit, startPartitionNumber, endPartitionNumber, sumColumns);
 		String output = DbMapToJson(tableName, AggRows, (System.currentTimeMillis() - startTime));
         
 		return output;
 	}
+
+	/**
+	 * Same as selectPartitions_DbToJson but without limit
+	 */
+	static public String selectPartitions_DbToJson(String tableName, DataSource ds, String query, 
+			Integer startPartitionNumber, Integer endPartitionNumber, List<Integer> sumColumns) {
+			return selectPartitions_DbToJson(tableName, ds, query, 
+											 startPartitionNumber, endPartitionNumber, sumColumns, null);
+	}
+	
 	
 	/**
 	 * Return Select query in MapList format (using partitions)
@@ -366,7 +377,7 @@ public class DbUtils {
 	 * 
 	 * @param aggListMap		Aggregated list/rows to merge to
 	 * @param ListMap			Current list/rows to merge into parent
- 	 * @param limit                 Limit the return map size, null is unlimited
+ 	 * @param limit             Limit the return map size, null is unlimited
  	 * @param sumColumns        Array of integers identifying the column number to sum (column must type int)
 	 * 
 	 * @return parent list with updates made

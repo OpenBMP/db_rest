@@ -53,14 +53,49 @@ public class Peers {
 		}
 	}
 
+	private String buildQuery_v_peers(String where, String orderBy, Integer limit, Boolean withGeo) {
+		StringBuilder query = new StringBuilder();
+		
+		if (withGeo == null) {
+			query.append("SELECT * FROM v_peers\n");
+			
+		} else {
+			query.append("SELECT v_peers.*,v_geo_ip.* \n");
+			query.append("    FROM v_peers LEFT JOIN v_geo_ip ON (v_geo_ip.ip_start_bin = v_peers.geo_ip_start)\n");
+		}
+		
+		if (where != null) { 
+			query.append(" WHERE ");
+			query.append(where);
+		}
+		
+		if (orderBy != null) {
+			query.append(" ORDER BY ");
+			query.append(orderBy);
+		}
+		
+		if (limit != null) {
+			query.append(" LIMIT ");
+			query.append(limit);
+		}
+		
+		
+		System.out.printf("QUERY:\n%s\n", query.toString());
+		
+		return query.toString();
+	}
+	
 	@GET
 	@Produces("application/json")
 	public Response getPeers(@QueryParam("limit") Integer limit,
+							 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
 		
+		String query = buildQuery_v_peers(where, orderby, limit, withGeo);
+		
 		return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_peers", limit, where, orderby));
+				DbUtils.select_DbToJson(mysql_ds, query));
 	}
 
 	@GET
@@ -68,6 +103,7 @@ public class Peers {
 	@Produces("application/json")
 	public Response getPeersByLocalIp(@PathParam("LocalIP") String localIP,
 			                 @QueryParam("limit") Integer limit,
+			                 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
 		
@@ -76,8 +112,10 @@ public class Peers {
 		if (where != null)
 			where_str += " and " + where;
 		
+		String query = buildQuery_v_peers(where_str, orderby, limit, withGeo);
+		
 		return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_peers", limit, where_str, orderby));
+				DbUtils.select_DbToJson(mysql_ds, query));
 	}
 	
 	@GET
@@ -85,6 +123,7 @@ public class Peers {
 	@Produces("application/json")
 	public Response getPeersByRemoteIp(@PathParam("peerIP") String peerIP,
 			                 @QueryParam("limit") Integer limit,
+			                 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
 		
@@ -92,9 +131,11 @@ public class Peers {
 		
 		if (where != null)
 			where_str += " and " + where;
+
+		String query = buildQuery_v_peers(where_str, orderby, limit, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_peers", limit, where_str, orderby));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 	
 	@GET
@@ -102,12 +143,15 @@ public class Peers {
 	@Produces("application/json")
 	public Response getPeersByRouterIp(@PathParam("routerIP") String routerIP,
 			                 @QueryParam("limit") Integer limit,
+			                 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("orderby") String orderby) {
 		
 		String where_str = " RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' ";
+
+		String query = buildQuery_v_peers(where_str, orderby, limit, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_peers", limit, where_str, orderby));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 
 	
@@ -116,6 +160,7 @@ public class Peers {
 	@Produces("application/json")
 	public Response getPeersByIp(@PathParam("peerASN") Integer asn,
 			                 @QueryParam("limit") Integer limit,
+			                 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
 		
@@ -123,9 +168,11 @@ public class Peers {
 		
 		if (where != null)
 			where_str += " and " + where;
+
+		String query = buildQuery_v_peers(where_str, orderby, limit, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_peers", limit, where_str, orderby));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 	
 	@GET
@@ -167,73 +214,52 @@ public class Peers {
 	@GET
 	@Path("/type/v4")
 	@Produces("application/json")
-	public Response getPeersTypeV4() {
+	public Response getPeersTypeV4(@QueryParam("withgeo") Boolean withGeo) {
 
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT * \n");
-		query.append("    FROM v_peers\n");
-		query.append("    WHERE isPeerIPv4 = 1");
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+		String query = buildQuery_v_peers("isPeerIPv4 = 1", null, null, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 	
 	@GET
 	@Path("/router/{routerIP}/type/v4")
 	@Produces("application/json")
-	public Response getPeersTypeV4ByRouter(@PathParam("routerIP") String routerIP) {
+	public Response getPeersTypeV4ByRouter(@PathParam("routerIP") String routerIP,
+											@QueryParam("withgeo") Boolean withGeo) {
 
-		String where_str = "( RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' )";
-		
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT * \n");
-		query.append("    FROM v_peers\n");
-		query.append("    WHERE isPeerIPv4 = 1 and ");
-		query.append(where_str);
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+		String where_str = "isPeerIPv4 = 1 and ( RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' )";
+
+		String query = buildQuery_v_peers(where_str, null, null, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 
 	@GET
 	@Path("/type/v6")
 	@Produces("application/json")
-	public Response getPeersTypeV6() {
+	public Response getPeersTypeV6(@QueryParam("withgeo") Boolean withGeo) {
 
-
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT * \n");
-		query.append("    FROM v_peers\n");
-		query.append("    WHERE isPeerIPv4 = 0");
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+		String query = buildQuery_v_peers("isPeerIPv4 = 0", null, null, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 	
 	
 	@GET
 	@Path("/router/{routerIP}/type/v6")
 	@Produces("application/json")
-	public Response getPeersTypeV6ByRouter(@PathParam("routerIP") String routerIP) {
+	public Response getPeersTypeV6ByRouter(@PathParam("routerIP") String routerIP,
+										   @QueryParam("withgeo") Boolean withGeo) {
 
-		String where_str = "( RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' )";
+		String where_str = "isPeerIPv4 = 0 and ( RouterName like '" + routerIP + "%' or RouterIP like '" + routerIP + "%' )";
 		
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT * \n");
-		query.append("    FROM v_peers\n");
-		query.append("    WHERE isPeerIPv4 = 0 and ");
-		query.append(where_str);
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+		String query = buildQuery_v_peers(where_str, null, null, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 	
 	@GET
@@ -258,33 +284,23 @@ public class Peers {
 	@GET
 	@Path("/status/down")
 	@Produces("application/json")
-	public Response getPeersStatusDown() {
+	public Response getPeersStatusDown(@QueryParam("withgeo") Boolean withGeo) {
 
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT * \n");
-		query.append("    FROM v_peers\n");
-		query.append("    WHERE isUp = 0 or isBMPConnected = 0");
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+		String query = buildQuery_v_peers("isUp = 0 or isBMPConnected = 0",  null, null, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+				DbUtils.select_DbToJson(mysql_ds, query));		
 	}
 	
 	@GET
 	@Path("/status/up")
 	@Produces("application/json")
-	public Response getPeersStatusUp() {
+	public Response getPeersStatusUp(@QueryParam("withgeo") Boolean withGeo) {
 
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT * \n");
-		query.append("    FROM v_peers\n");
-		query.append("    WHERE isUp = 1");
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+		String query = buildQuery_v_peers("isUp = 1",  null, null, withGeo);
 		
 		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+				DbUtils.select_DbToJson(mysql_ds, query));
 	}
 
 	@GET

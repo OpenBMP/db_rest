@@ -80,7 +80,7 @@ public class WhoisAsn {
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
 		query.append("    FROM gen_whois_asn w LEFT JOIN \n");
-        query.append("         gen_asn_stats s ON (w.asn = s.asn) JOIN\n");
+        query.append("         gen_asn_stats s ON (w.asn = s.asn) LEFT JOIN\n");
         query.append("            (select max(s.timestamp) as ts FROM gen_asn_stats s JOIN gen_whois_asn w\n");
         query.append("                ON (s.asn = w.asn)\n");
         query.append("                WHERE ");
@@ -91,6 +91,32 @@ public class WhoisAsn {
 		query.append(where);
 		query.append("    group by w.asn\n");
 		query.append(limit_str);
+	
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
+	
+	@GET
+	@Path("/count")
+	@Produces("application/json")
+	public Response getWhoisCount(@QueryParam("where") String where) {
+		
+		if (where == null) {
+			System.out.println("Bad request, no where clause");
+			return Response.status(400).entity("")
+					.header("Access-Control-Allow-Origin", "*")
+					.header("Access-Control-Allow-Methods", "GET")
+					.allow("OPTIONS")
+					.build();
+		}
+		
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT count(*) as count\n");
+		query.append("    FROM gen_whois_asn w \n");
+        query.append("    WHERE ");
+		query.append(where);
 	
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		

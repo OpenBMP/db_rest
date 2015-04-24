@@ -117,9 +117,10 @@ public class Updates {
 		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
 		query.append("    FROM\n");
 		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,path.timestamp\n");
-		query.append("                FROM path_attr_log path  FORCE INDEX (idx_ts)\n"); 
+		query.append("                FROM path_attr_log path  FORCE INDEX (idx_ts) JOIN path_attrs p ON (path.path_attr_hash_id = p.hash_id)\n");
 		query.append("                WHERE path.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) and\n");
 		query.append("                      path.timestamp <= " + timestamp + "\n");
+		query.append("                      AND peer_hash_id = '" + peerHashId + "'\n");
 		query.append("                GROUP BY rib_hash_id\n");
 		query.append("                ORDER BY count DESC limit " + limit + "\n");
 		query.append("         ) u\n");

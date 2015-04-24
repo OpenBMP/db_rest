@@ -323,9 +323,9 @@ public class Peers {
 	}
 
 	@GET
-	@Path("/prefix/{peerIP}")
+	@Path("/prefix/{peerHashId}")
 	@Produces("application/json")
-	public Response getPeersPrefixLastByPeer(@PathParam("peerIP") String peerIP,
+	public Response getPeersPrefixLastByPeer(@PathParam("peerHashId") String peerHashId,
 			                                 @QueryParam("last") Integer limit) {
 		
 		String tableName = "v_peer_prefix_report_last";
@@ -338,7 +338,7 @@ public class Peers {
 				
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, tableName, 
-						limit, "PeerName like '" + peerIP + "%'", orderBy));
+						limit, "peer_hash_id like '" + peerHashId + "'", orderBy));
 	}
 	
 }

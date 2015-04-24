@@ -67,6 +67,22 @@ public class Rib {
 				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where, orderby));
 	}
 	
+	@GET
+	@Path("/peer/{peerHashId}")
+	@Produces("application/json")
+	public Response getRibByPeer( @PathParam("peerHashId") String peerHashId,
+							@QueryParam("limit") Integer limit,
+						   @QueryParam("where") String where,
+						   @QueryParam("orderby") String orderby) {
+
+		String where_str = "peer_hash_id = '" + peerHashId + "'";
+
+		if (where != null)
+			where_str += " and " + where;
+
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+	}
 
 	@GET
 	@Path("/asn/{ASN}")
@@ -77,6 +93,24 @@ public class Rib {
 						   @QueryParam("orderby") String orderby) {
 		
 		String where_str = "Origin_AS = " + asn;
+		
+		if (where != null)
+			where_str += " and " + where;
+		
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+	}
+	
+	@GET
+	@Path("/peer/{peerHashId}/asn/{ASN}")
+	@Produces("application/json")
+	public Response getRibAsnByPeer(@PathParam("ASN") Integer asn,
+						   @PathParam("peerHashId") String peerHashId,
+						   @QueryParam("limit") Integer limit,
+						   @QueryParam("where") String where,
+						   @QueryParam("orderby") String orderby) {
+		
+		String where_str = "Origin_AS = " + asn + " and peer_hash_id = '" + peerHashId + "'";
 		
 		if (where != null)
 			where_str += " and " + where;
@@ -103,6 +137,26 @@ public class Rib {
 	}
 
 	@GET
+	@Path("peer/{peerHashId}/asn/{ASN}/count")
+	@Produces("application/json")
+	public Response getRibOriginASCountByPeer(@PathParam("ASN") Integer asn,
+			 						    @PathParam("peerHashId") String peerHashId) {
+		if (asn == null)
+			return Response.status(400).entity(
+					"{ \"error\": \"Missing required path parameter\" }").build();
+		
+		StringBuilder query = new StringBuilder();
+		query.append("select count(Prefix) as PrefixCount FROM v_routes where Origin_AS = " + asn);
+		query.append(" and peer_hash_id = '" + peerHashId + "'");
+		
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+		
+		return RestResponse.okWithBody(
+					DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
+
+	
+	@GET
 	@Path("/prefix/{prefix}")
 	@Produces("application/json")
 	public Response getRibByPrefix(@PathParam("prefix") String prefix,
@@ -118,6 +172,25 @@ public class Rib {
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
 	}
+
+	@GET
+	@Path("/peer/{peerHashId}/prefix/{prefix}")
+	@Produces("application/json")
+	public Response getRibByPrefixByPeer(@PathParam("prefix") String prefix,
+						   @PathParam("peerHashId") String peerHashId,
+						   @QueryParam("limit") Integer limit,
+						   @QueryParam("where") String where,
+						   @QueryParam("orderby") String orderby) {
+		
+		String where_str = "peer_hash_id = '" + peerHashId + "' and Prefix like '" + prefix + "%' ";
+		
+		if (where != null)
+			where_str += " and " + where;
+		
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+	}
+
 	
 	@GET
 	@Path("/prefix/{prefix}/{length}")
@@ -132,6 +205,29 @@ public class Rib {
 			length = 32;
 		
 		String where_str = "Prefix = '" + prefix + "' and PrefixLen = " + length;
+		
+		if (where != null)
+			where_str += " and " + where;
+		
+		
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+	}
+	
+	@GET
+	@Path("/peer/{peerHashId}/prefix/{prefix}/{length}")
+	@Produces("application/json")
+	public Response getRibByPrefixLengthByPeer(@PathParam("prefix") String prefix,
+										 @PathParam("peerHashId") String peerHashId,
+						   			     @PathParam("length") Integer length,
+						   			     @QueryParam("limit") Integer limit,
+						   			     @QueryParam("where") String where,
+						   			     @QueryParam("orderby") String orderby) {
+		
+		if (length < 1 || length > 128)
+			length = 32;
+		
+		String where_str = "peer_hash_id = '" + peerHashId + "' and Prefix = '" + prefix + "' and PrefixLen = " + length;
 		
 		if (where != null)
 			where_str += " and " + where;
@@ -187,6 +283,54 @@ public class Rib {
 	}
 	
 	@GET
+	@Path("/peer/{peerHashId}/lookup/{IP}")
+	@Produces("application/json")
+	public Response getRibByLookupByPeer(@PathParam("IP") String ip,
+						   @PathParam("peerHashId") String peerHashId,
+						   @QueryParam("limit") Integer limit,
+						   @QueryParam("where") String where,
+						   @QueryParam("orderby") String orderby) {
+		
+		StringBuilder query = new StringBuilder();
+		
+		// Query first for the prefix/len
+		query.append("SELECT distinct prefix,prefix_len FROM rib force index (idx_range_prefix_bin)\n");
+		query.append("        WHERE prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
+		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
+		query.append("               and peer_hash_id = '"+ peerHashId + "'\n");
+        query.append("        ORDER BY prefix_bcast_bin limit 1\n");
+		
+		long startTime = System.currentTimeMillis();
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+        
+     	Map<String,List<DbColumnDef>> ResultsMap;
+     	ResultsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+        
+     	if (ResultsMap.size() <= 0) {
+     		// No results to return
+     		return RestResponse.okWithBody("{}");
+     	} 
+     	
+     	else {
+     		// Query v_routes for the prefix found
+     		String prefix = ResultsMap.entrySet().iterator().next().getValue().get(0).getValue();
+     		String prefix_len = ResultsMap.entrySet().iterator().next().getValue().get(1).getValue();
+     		
+     		StringBuilder where_str = new StringBuilder();
+     		where_str.append("peer_hash_id = '" + peerHashId + "'\n");
+     		where_str.append("and prefix = \"" + prefix + "\"");
+     		where_str.append(" AND prefixlen = " + prefix_len);
+     				
+     		if (where != null)
+				where_str.append(" and " + where);
+			
+			return RestResponse.okWithBody(
+					DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str.toString(), orderby,
+							(System.currentTimeMillis() - startTime)));
+     	}
+	}
+	
+	@GET
 	@Path("/history/{prefix}/{length}")
 	@Produces("application/json")
 	public Response getRibHistory(@PathParam("prefix") String prefix,
@@ -214,6 +358,37 @@ public class Rib {
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes_history", limit, where_str, orderby));
 	}
+
+	@GET
+	@Path("/peer/{peerHashId}/history/{prefix}/{length}")
+	@Produces("application/json")
+	public Response getRibHistoryByPeer(@PathParam("prefix") String prefix,
+			 					  @PathParam("peerHashId") String peerHashId,
+								  @PathParam("length") Integer length,
+								  @QueryParam("limit") Integer limit,
+								  @QueryParam("days") Integer days,
+								  @QueryParam("where") String where,
+								  @QueryParam("orderby") String orderby) {
+		
+		if (length < 1 || length > 128)
+			length = 32;
+		
+		String	where_str = "peer_hash_id = '"+ peerHashId + "' and Prefix = '" + prefix + "' and PrefixLen = " + length;
+		
+		if (days != null && days >= 15)
+			where_str += " and LastModified >= date_sub(current_timestamp, interval " + days + " day)";		
+		else
+			where_str += " and LastModified >= date_sub(current_timestamp, interval 2 day)";
+		
+		where_str += " and LastModified <= current_timestamp ";
+		
+		if (where != null)
+			where_str += " and " + where;
+		
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes_history", limit, where_str, orderby));
+	}
+
 	
 	/**
 	 * Cleanup

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Context>
 	<Resource name="jdbc/MySQLDB" auth="Container" type="javax.sql.DataSource"
-		maxTotal="48" minIdle="0" maxIdle="10"
+		maxTotal="60" minIdle="0" maxIdle="10"
 		validationQuery="SELECT 1" testOnBorrow="true" testWhileIdle="true" 
 		timeBetweenEvictionRunsMillis="1000" minEvictableIdleTimeMillis="60000"
 		logAbandoned="true" 
-		username="openbmp" password="openbmpNow" url="jdbc:mysql://db1.openbmp.org:3306/openBMP"
+		username="openbmp" password="openbmpNow" url="jdbc:mysql://db.openbmp.org:3306/openBMPdev"
 		driverClassName="org.mariadb.jdbc.Driver"
 		factory="org.apache.tomcat.jdbc.pool.DataSourceFactory" />
 		<!--  factory="org.apache.tomcat.dbcp.dbcp.BasicDataSourceFactory"  /> -->

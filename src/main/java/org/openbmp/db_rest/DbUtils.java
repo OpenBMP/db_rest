@@ -35,7 +35,7 @@ import org.codehaus.jackson.JsonGenerator;
 
 
 public class DbUtils {
-	private static final int MAX_THREADS = 10;				// Maximum number of threads to run for parallel query
+	private static final int MAX_THREADS = 12;				// Maximum number of threads to run for parallel query
 	private static int rows;
 
 	/**
@@ -164,7 +164,7 @@ public class DbUtils {
 	}
 	
 	/**
-	 * Return Select query in JSON format
+	 * Return Select query in MAP format
 	 * 
 	 * 	 Select based query, should contain the SELECT statement. 
 	 * 

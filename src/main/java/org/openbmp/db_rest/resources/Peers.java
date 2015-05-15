@@ -8,6 +8,13 @@
  */
 package org.openbmp.db_rest.resources;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.math.BigInteger;
+import java.sql.Types;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import javax.annotation.PostConstruct;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -22,6 +29,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.JsonGenerator;
+import org.openbmp.db_rest.DbColumnDef;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
 
@@ -94,6 +105,149 @@ public class Peers {
 		
 		String query = buildQuery_v_peers(where, orderby, limit, withGeo);
 		
+		return RestResponse.okWithBody(
+				DbUtils.select_DbToJson(mysql_ds, query));
+	}
+
+	//TODO: Remove /map if not needed
+	@GET
+	@Path("/map")
+	@Produces("application/json")
+	public Response getPeers(@QueryParam("limit") Integer limit,
+							 @QueryParam("where") String where) {
+
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT concat(latitude,',', longitude) as map,  \n");
+		query.append("         v_peers.RouterIP,v_peers.RouterName,v_peers.LocalASN,v_peers.PeerName,\n");
+		query.append("         v_peers.PeerIP,v_peers.PeerASN,v_peers.as_name,v_peers.LastDownTimestamp,v_peers.LastModified,\n");
+		query.append("         v_peers.isPeerIPv4,v_peers.LocalPort,v_peers.PeerPort,v_peers.isUp,v_peers.peer_hash_id,\n");
+		query.append("         v_geo_ip.country,v_geo_ip.stateprov,v_geo_ip.city, \n");
+		query.append("         v_geo_ip.latitude,v_geo_ip.longitude \n");
+		query.append("    FROM v_peers LEFT JOIN v_geo_ip ON (v_geo_ip.ip_start_bin = v_peers.geo_ip_start)\n");
+
+		if (where != null) {
+			query.append(" WHERE ");
+			query.append(where);
+		}
+
+        query.append("    ORDER BY concat(latitude,',', longitude)\n");
+
+		if (limit != null) {
+			query.append(" LIMIT ");
+			query.append(limit);
+		}
+
+		System.out.printf("QUERY:\n%s\n", query.toString());
+
+		Map<String,List<DbColumnDef>> rowsMap;
+		rowsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+
+        // Sort the rows map
+        Map<String,List<DbColumnDef>> rows = new TreeMap<String,List<DbColumnDef>>(rowsMap);
+
+        StringWriter swriter = new StringWriter();
+        JsonFactory jfac = new JsonFactory();
+        long fetchTime = System.currentTimeMillis();
+
+        try {
+            JsonGenerator jgen = jfac.createJsonGenerator(swriter);
+
+            jgen.writeStartObject(); // Root object
+
+            jgen.writeObjectFieldStart("v_peers_map");
+
+            String prev_map_info = "";
+
+            // Loop through all rows
+            for(Map.Entry<String, List<DbColumnDef>> row : rows.entrySet()){
+                //System.out.println("PriKey=" + row.getKey());
+
+                // Get grouping object
+                String map_info = row.getValue().get(0).getValue().toString();
+
+                if (! prev_map_info.equals(map_info)) {
+
+                    if (prev_map_info.length() > 0) {
+                        jgen.writeEndArray();
+                    }
+
+                    // Start group object
+                    jgen.writeArrayFieldStart(map_info);
+                }
+
+                prev_map_info = map_info;
+
+                // Begin row object
+                jgen.writeStartObject();
+
+                List<DbColumnDef> cols = row.getValue();
+                for (int i=0; i < cols.size(); i++) {
+
+                    // Write column and value field
+                    jgen.writeFieldName(cols.get(i).getName());
+
+                    if (cols.get(i).getValue() != null) {
+                        switch (cols.get(i).getType()) {
+                            case Types.BIGINT:
+                                jgen.writeNumber(new BigInteger(cols.get(i).getValue()));
+                                break;
+
+                            case Types.TINYINT:
+                            case Types.INTEGER:
+                                jgen.writeNumber(new Integer(cols.get(i).getValue()));
+                                break;
+
+                            default:
+                                jgen.writeString(cols.get(i).getValue());
+                                break;
+                        }
+                    }
+                    else {
+                        jgen.writeString("null");
+                    }
+
+                }
+                jgen.writeEndObject();
+            }
+
+            // end the data array
+            jgen.writeEndArray();
+
+            // end the table object
+            jgen.writeEndObject();
+
+            // end the root object
+            jgen.writeEndObject();
+
+            jgen.close();
+
+        } catch (JsonGenerationException e) {
+            e.printStackTrace();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+		return RestResponse.okWithBody(swriter.toString());
+	}
+
+
+	@GET
+	@Path("/{peerHashId}")
+	@Produces("application/json")
+	public Response getPeersByPeerHashId(@PathParam("peerHashId") String peerHashId,
+									  @QueryParam("limit") Integer limit,
+									  @QueryParam("withgeo") Boolean withGeo,
+									  @QueryParam("where") String where,
+									  @QueryParam("orderby") String orderby) {
+
+		String where_str = " peer_hash_id = '" + peerHashId + "' ";
+
+		if (where != null)
+			where_str += " and " + where;
+
+		String query = buildQuery_v_peers(where_str, orderby, limit, withGeo);
+
 		return RestResponse.okWithBody(
 				DbUtils.select_DbToJson(mysql_ds, query));
 	}

@@ -63,34 +63,17 @@ public class Upstream {
 					"{ \"error\": \"Missing required path parameter\" }").build();
 		
 		StringBuilder query = new StringBuilder();
-		
-		/*
-		query.append(" select cast(trim(substring_index(concat(\n");
-	    query.append("           SUBSTRING_index(concat(as_path, ' '), ' " + asn + " ', 1), ' '), ' ', -2)) as unsigned) as asn,\n");
-	    query.append("       as_name,country,org_name\n");
-	    query.append("     from path_attrs PARTITION p join rib r ON (p.hash_id = r.path_attr_hash_id)\n");
-	    query.append("         left join gen_whois_asn w ON (cast(trim(substring_index(concat(\n");
-	    query.append("                  SUBSTRING_index(concat(as_path, ' '), ' "+ asn + " ', 1), ' '), ' ', -2)) as unsigned) = w.asn)\n");
-		query.append("     where as_path regexp '.* " + asn + "([ ]|$)+'");
-		query.append("     group by asn\n");
-		query.append("     order by null\n");
-		*/
-		
-		query.append("select p.asn,as_name,city,state_prov,country,org_name\n");
-		query.append("   from (select hash_id,peer_hash_id,cast(trim(substring_index(concat(");
-		query.append("             SUBSTRING_index(concat(as_path, ' '), ' " + asn + " ', 1), ' '), ' ', -2)) as unsigned) as asn\n");
-		query.append("          from path_attrs PARTITION\n");
-		query.append("          where as_path regexp '.* " + asn + "([ ]|$)+' \n");
-		query.append("        ) p join rib r on (p.hash_id = r.path_attr_hash_id and p.peer_hash_id = r.peer_hash_id) \n");
-		query.append("            left join gen_whois_asn w ON (p.asn = w.asn)\n");
-		query.append("    where p.asn > 0\n");
-		query.append("    group by p.asn\n");
-		query.append("    order by p.asn\n");
-		
+
+		query.append("SELECT upstreamASN.asn,as_name,city,state_prov,country,org_name\n");
+		query.append("    FROM (select distinct asn_left as asn\n");
+		query.append("         from as_path_analysis where asn = " + asn +  " and asn_left != 0) upstreamASN\n");
+		query.append("    LEFT JOIN gen_whois_asn w ON (upstreamASN.asn = w.asn)\n");
+		query.append("    GROUP BY upstreamASN.asn ORDER BY upstreamASN.asn\n");
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
-					DbUtils.selectPartitions_DbToJson("upstreamASN", mysql_ds, query.toString(), 0, 47, null));
+				DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 	
 	@GET
@@ -100,39 +83,21 @@ public class Upstream {
 		if (asn == null)
 			return Response.status(400).entity(
 					"{ \"error\": \"Missing required path parameter\" }").build();
-		
+
 		StringBuilder query = new StringBuilder();
-		query.append(" select p.asn, count(prefix) as Prefixes_Learned,\n");
-	    query.append("           as_name,city,state_prov,country,org_name\n");
-	    query.append("     from (select distinct hash_id,peer_hash_id,cast(trim(substring_index(concat(SUBSTRING_index(\n");
-	    query.append("               concat(as_path, ' '), ' "+asn+" ', 1), ' '), ' ', -2)) as unsigned) as asn\n");
-	    query.append("            from path_attrs PARTITION \n");
-	    query.append("            where as_path regexp '.* "+asn+"([ ]|$)+' ) p\n");
-	    query.append("        join rib r on (r.path_attr_hash_id = p.hash_id and r.peer_hash_id = p.peer_hash_id)\n");
-	    query.append("        left join gen_whois_asn w ON (p.asn = w.asn)\n");
-	    query.append("     where p.asn > 0\n");
-		query.append("     group by p.asn\n");
-		query.append("     order by p.asn\n");
-		
-		/*
-		query.append("select asn, count(distinct prefix, prefix_len) as Prefixes_Learned,\n");
-		query.append("              as_name,country,org_name\n");
-		query.append("   from (select hash_id,peer_hash_id,cast(trim(substring_index(concat(SUBSTRING_index(");
-		query.append("               concat(as_path, ' '), ' " + asn +" ', 1), ' '), ' ', -2)) as unsigned) as asn\n");
-		query.append("           from path_attrs PARTITION\n");
-		query.append("           where as_path regexp '.* " + asn +"([ ]|$)+'");
-		query.append("	      ) p join rib r on (p.peer_hash_id = r.peer_hash_id and p.hash_id = r.path_attr_hash_id) \n");
-		query.append("            left join gen_whois_asn w ON (p.asn = w.asn)\n");
-		query.append("    group by asn\n");
-		query.append("    order by asn\n");
-		*/
-		
+
+		query.append("SELECT upstreamASN.asn,count(distinct prefix_bin,prefix_len) as Prefixes_Learned,\n");
+		query.append("               as_name,city,state_prov,country,org_name\n");
+		query.append("    FROM (select distinct asn_left as asn,path_attr_hash_id\n");
+		query.append("         from as_path_analysis where asn = " + asn +  " and asn_left != 0) upstreamASN\n");
+		query.append("    JOIN rib on (upstreamASN.path_attr_hash_id = rib.path_attr_hash_id)\n");
+		query.append("    LEFT JOIN gen_whois_asn w ON (upstreamASN.asn = w.asn)\n");
+		query.append("    GROUP BY upstreamASN.asn ORDER BY upstreamASN.asn\n");
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
-		ArrayList<Integer> includeColumns = new ArrayList<Integer>();
-		includeColumns.add(1);
+
 		return RestResponse.okWithBody(
-					DbUtils.selectPartitions_DbToJson("upstreamASN", mysql_ds, query.toString(), 0, 47, includeColumns));
+				DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 	
 	@GET
@@ -142,33 +107,22 @@ public class Upstream {
 		if (asn == null)
 			return Response.status(400).entity(
 					"{ \"error\": \"Missing required path parameter\" }").build();
-		
-		StringBuilder query = new StringBuilder();
-		query.append("select rtr.ip_address as BMPRouter, bp.peer_addr as PeerAddr, d.asn,d.Prefixes_Learned,\n");
-		query.append("                   as_name,city,state_prov,country,org_name\n");
-		query.append("        FROM (select peer_hash_id,asn, count(distinct prefix, prefix_len) as Prefixes_Learned\n");
-		query.append("               from (select hash_id, cast(trim(substring_index(concat(SUBSTRING_index(\n");
-		query.append("                        concat(as_path, ' '), ' "+ asn +" ', 1), ' '), ' ', -2)) as unsigned) as asn\n");
-		query.append("               from path_attrs PARTITION \n");
-		query.append("               where as_path regexp '.* "+ asn +"([ ]|$)+'\n");
-		query.append("         ) p join rib r on (p.hash_id = r.path_attr_hash_id)\n");
-		query.append("         where p.asn > 0\n");
-		query.append("         group by p.asn\n");
-		query.append("         order by null\n");
-		query.append("     ) d\n");
-		query.append("    JOIN bgp_peers bp on (d.peer_hash_id = bp.hash_id)\n"); 
-		query.append("    JOIN routers rtr on (bp.router_hash_id = rtr.hash_id)\n");
-		query.append("    left join gen_whois_asn w ON (d.asn = w.asn)\n");
-	    
-		query.append("    group by rtr.ip_address,bp.peer_addr,d.asn\n");
-		query.append("    order by BMPRouter,PeerAddr,cast(d.asn as unsigned)\n");
 
-		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
-		ArrayList<Integer> includeColumns = new ArrayList<Integer>();
-		includeColumns.add(3);
+		StringBuilder query = new StringBuilder();
+
+		query.append("SELECT upstreamASN.asn,count(distinct prefix_bin,prefix_len) as Prefixes_Learned,\n");
+		query.append("               p.peer_addr as PeerAddr,p.hash_id as peer_hash_id,\n");
+		query.append("               as_name,city,state_prov,country,org_name\n");
+		query.append("    FROM (select distinct asn_left as asn,path_attr_hash_id\n");
+		query.append("         from as_path_analysis where asn = " + asn +  " and asn_left != 0) upstreamASN\n");
+		query.append("    JOIN rib on (upstreamASN.path_attr_hash_id = rib.path_attr_hash_id)\n");
+		query.append("    JOIN bgp_peers p ON (rib.peer_hash_id = p.hash_id)\n");
+		query.append("    LEFT JOIN gen_whois_asn w ON (upstreamASN.asn = w.asn)\n");
+		query.append("    GROUP BY upstreamASN.asn,peer_hash_id ORDER BY upstreamASN.asn\n");
+
+
 		return RestResponse.okWithBody(
-					DbUtils.selectPartitions_DbToJson("upstreamASN", mysql_ds, query.toString(), 0, 47, includeColumns));
+				DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 	
 }

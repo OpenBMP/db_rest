@@ -35,7 +35,7 @@ import org.codehaus.jackson.JsonGenerator;
 
 
 public class DbUtils {
-	private static final int MAX_THREADS = 12;				// Maximum number of threads to run for parallel query
+	private static final int MAX_THREADS = 16;				// Maximum number of threads to run for parallel query
 	private static int rows;
 
 	/**
@@ -94,7 +94,7 @@ public class DbUtils {
 		System.out.println("QUERY: " + select_query);
 	
 		// Run the query
-		output = select_DbToJson(ds, select_query, extraTimeInMs);
+		output = select_DbToJson(ds, null, select_query, extraTimeInMs);
 		
 		return output;
 	}
@@ -111,9 +111,25 @@ public class DbUtils {
 	 * @return String Json formatted result
 	 */
 	static public String select_DbToJson(DataSource ds, String query) {
-		return select_DbToJson(ds, query, 0);
+		return select_DbToJson(ds, null, query, 0);
 	}
-	
+
+	/**
+	 * Return Select query in JSON format
+	 *
+	 * 	 Select based query, should contain the SELECT statement.
+	 *
+	 * @param ds			Datasource - must already be initialized, via context.xml or otherwise
+	 * @param tableName		Name of the table to query
+	 * @param query			Full select query to run (including SELECT all the way to ORDER BY
+	 *
+	 *
+	 * @return String Json formatted result
+	 */
+	static public String select_DbToJson(DataSource ds, String tableName, String query) {
+		return select_DbToJson(ds, tableName, query, 0);
+	}
+
 	/**
 	 * Return Select query in JSON format
 	 * 
@@ -121,11 +137,12 @@ public class DbUtils {
 	 * 
 	 * @param ds			Datasource - must already be initialized, via context.xml or otherwise
 	 * @param query			Full select query to run (including SELECT all the way to ORDER BY
- 	 * @param extraTimeInMs Method time to add to the overall query time in milliseconds
+   	 * @param tableName		Name of the table to query
+	 * @param extraTimeInMs Method time to add to the overall query time in milliseconds
 	 *
 	 * @return String Json formatted result
 	 */
-	static public String select_DbToJson(DataSource ds, String query, long extraTimeInMs) {
+	static public String select_DbToJson(DataSource ds, String tableName, String query, long extraTimeInMs) {
 		
 		String output = "{}";
 
@@ -142,7 +159,7 @@ public class DbUtils {
 			long fetchTime = System.currentTimeMillis();
 						
 			rs = stmt.executeQuery(query);
-			output = DbUtils.DbResultsToJson(rs, (System.currentTimeMillis() - fetchTime) + extraTimeInMs);
+			output = DbUtils.DbResultsToJson(rs, tableName, (System.currentTimeMillis() - fetchTime) + extraTimeInMs);
             
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -376,7 +393,7 @@ public class DbUtils {
 	 *  as summary, then it'll be added. 
 	 * 
 	 * @param aggListMap		Aggregated list/rows to merge to
-	 * @param ListMap			Current list/rows to merge into parent
+	 * @param listMap			Current list/rows to merge into parent
  	 * @param limit             Limit the return map size, null is unlimited
  	 * @param sumColumns        Array of integers identifying the column number to sum (column must type int)
 	 * 
@@ -509,7 +526,7 @@ public class DbUtils {
 							
 						case Types.TINYINT:
 						case Types.INTEGER:
-							jgen.writeNumber(new Integer(cols.get(i).getValue()));
+							jgen.writeNumber(new BigInteger(cols.get(i).getValue()));
 							break;
 							
 						default:
@@ -565,10 +582,13 @@ public class DbUtils {
 	 *                           }
 	 *          }
 	 * 
-	 * @param db_results		Results from DB query	
+	 * @param db_results		Results from DB query
+	 * @param tableName			Name of the table to query
+	 * @param queryTime_ms		Query time in milliseconds
+	 *
 	 * @return
 	 */
-	static public String DbResultsToJson(ResultSet db_results, long queryTime_ms) {
+	static public String DbResultsToJson(ResultSet db_results, String tableName, long queryTime_ms) {
 		StringWriter swriter = new StringWriter();
 		JsonFactory jfac = new JsonFactory();
 		long fetchTime = System.currentTimeMillis();
@@ -578,7 +598,9 @@ public class DbUtils {
 			JsonGenerator jgen = jfac.createJsonGenerator(swriter);
 			
 			jgen.writeStartObject(); // Root object
-			if (meta.getTableName(1).length() > 0)
+			if (tableName != null)
+				jgen.writeObjectFieldStart(tableName);
+			else if (meta.getTableName(1).length() > 0)
 				jgen.writeObjectFieldStart(meta.getTableName(1));
 			else if (meta.getColumnCount() > 1 && meta.getTableName(2).length() > 0)
 				jgen.writeObjectFieldStart(meta.getTableName(2));

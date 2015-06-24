@@ -85,38 +85,132 @@ public class Rib {
 	}
 
 	@GET
+	@Path("/router/{routerHashId}")
+	@Produces("application/json")
+	public Response getRibByRouter( @PathParam("routerHashId") String routerHashId,
+								  @QueryParam("limit") Integer limit,
+								  @QueryParam("where") String where,
+								  @QueryParam("orderby") String orderby) {
+
+		String where_str = "router_hash_id = '" + routerHashId + "'";
+
+		if (where != null)
+			where_str += " and " + where;
+
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+	}
+
+	@GET
 	@Path("/asn/{ASN}")
 	@Produces("application/json")
 	public Response getRibAsn(@PathParam("ASN") Integer asn,
-						   @QueryParam("limit") Integer limit,
-						   @QueryParam("where") String where,
-						   @QueryParam("orderby") String orderby) {
-		
-		String where_str = "Origin_AS = " + asn;
-		
+						      @QueryParam("limit") Integer limit,
+						      @QueryParam("where") String where,
+						      @QueryParam("orderby") String orderby,
+                              @QueryParam("brief") Boolean brief,
+						      @QueryParam("distinct") Boolean distinct) {
+
+
+		StringBuilder query = new StringBuilder();
+
+        query.append("    SELECT  if (length(rtr.name) > 0, rtr.name,rtr.ip_address) AS RouterName,\n");
+        query.append("    if(length(p.name) > 0, p.name, p.peer_addr) AS PeerName,\n");
+        query.append("    r.prefix AS Prefix,r.prefix_len AS PrefixLen,r.isIPv4 as isIPv4,\n");
+
+        if (brief == null) {
+            query.append("    path.origin AS Origin,r.origin_as AS Origin_AS,path.med AS MED,\n");
+            query.append("    		path.local_pref AS LocalPref,path.next_hop AS NH,path.as_path AS AS_Path,\n");
+            query.append("    path.as_path_count AS ASPath_Count,path.community_list AS Communities,\n");
+            query.append("    path.ext_community_list AS ExtCommunities,\n");
+            query.append("    		path.cluster_list AS ClusterList,path.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,\n");
+            query.append("    p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
+            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+            query.append("    r.hash_id as rib_hash_id,\n");
+            query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn\n");
+            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+        }
+
+        query.append("    r.hash_id as rib_hash_id,\n");
+        query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id\n");
+        query.append("    FROM bgp_peers p JOIN rib r force index (idx_origin_as)ON (r.peer_hash_id = p.hash_id)\n");
+		query.append("    JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id)\n");
+		query.append("    JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
+		query.append("    WHERE r.isWithdrawn = False and r.origin_as = " + asn + "\n");
+
 		if (where != null)
-			where_str += " and " + where;
-		
+			query.append(" AND " + where);
+
+		if (orderby != null)
+			query.append(" ORDER BY " + orderby);
+
+		if (distinct != null)
+			query.append("    GROUP BY prefix_bin,prefixlen");
+
+		if (limit != null)
+			query.append(" LIMIT " + limit);
+		else
+			query.append(" LIMIT 1000");
+
+        System.out.println("QUERY= " + query.toString());
 		return RestResponse.okWithBody(
-				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+				DbUtils.select_DbToJson(mysql_ds, "v_routes", query.toString()));
 	}
 	
 	@GET
 	@Path("/peer/{peerHashId}/asn/{ASN}")
 	@Produces("application/json")
 	public Response getRibAsnByPeer(@PathParam("ASN") Integer asn,
-						   @PathParam("peerHashId") String peerHashId,
-						   @QueryParam("limit") Integer limit,
-						   @QueryParam("where") String where,
-						   @QueryParam("orderby") String orderby) {
-		
-		String where_str = "Origin_AS = " + asn + " and peer_hash_id = '" + peerHashId + "'";
-		
-		if (where != null)
-			where_str += " and " + where;
-		
-		return RestResponse.okWithBody(
-				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+						            @PathParam("peerHashId") String peerHashId,
+						            @QueryParam("limit") Integer limit,
+						            @QueryParam("where") String where,
+                                    @QueryParam("brief") Boolean brief,
+                                    @QueryParam("distinct") Boolean distinct,
+						            @QueryParam("orderby") String orderby) {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("    SELECT  if (length(rtr.name) > 0, rtr.name,rtr.ip_address) AS RouterName,\n");
+        query.append("    if(length(p.name) > 0, p.name, p.peer_addr) AS PeerName,\n");
+        query.append("    r.prefix AS Prefix,r.prefix_len AS PrefixLen,r.isIPv4 as isIPv4,\n");
+
+        if (brief == null) {
+            query.append("    path.origin AS Origin,r.origin_as AS Origin_AS,path.med AS MED,\n");
+            query.append("    		path.local_pref AS LocalPref,path.next_hop AS NH,path.as_path AS AS_Path,\n");
+            query.append("    path.as_path_count AS ASPath_Count,path.community_list AS Communities,\n");
+            query.append("    path.ext_community_list AS ExtCommunities,\n");
+            query.append("    		path.cluster_list AS ClusterList,path.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,\n");
+            query.append("    p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
+            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+            query.append("    r.hash_id as rib_hash_id,\n");
+            query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn\n");
+            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+        }
+
+        query.append("    r.hash_id as rib_hash_id,\n");
+        query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id\n");
+        query.append("    FROM bgp_peers p JOIN rib r force index (idx_origin_as)ON (r.peer_hash_id = p.hash_id)\n");
+        query.append("    JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id)\n");
+        query.append("    JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
+        query.append("    WHERE r.isWithdrawn = False and r.origin_as = " + asn + " and r.peer_hash_id = '" + peerHashId + "'\n");
+
+        if (where != null)
+            query.append(" AND " + where);
+
+        if (orderby != null)
+            query.append(" ORDER BY " + orderby);
+
+        if (distinct != null)
+            query.append("    GROUP BY prefix_bin,prefixlen");
+
+        if (limit != null)
+            query.append(" LIMIT " + limit);
+        else
+            query.append(" LIMIT 1000");
+
+        System.out.println("QUERY= " + query.toString());
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, "v_routes", query.toString()));
 	}
 
 	@GET
@@ -248,16 +342,18 @@ public class Rib {
 		StringBuilder query = new StringBuilder();
 		
 		// Query first for the prefix/len
-		query.append("SELECT distinct prefix,prefix_len FROM rib force index (idx_range_prefix_bin)\n");
+		query.append("SELECT distinct prefix,prefix_len \n");
+		query.append("        FROM rib force index (idx_prefix_bin)\n");
 		query.append("        WHERE prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
-        query.append("        ORDER BY prefix_bcast_bin limit 1\n");
+        query.append("        ORDER BY prefix_bin desc limit 1\n");
 		
 		long startTime = System.currentTimeMillis();
 		System.out.println("QUERY: \n" + query.toString() + "\n");
         
      	Map<String,List<DbColumnDef>> ResultsMap;
      	ResultsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+		//ResultsMap = DbUtils.selectPartitions_DbToMap(mysql_ds, query.toString(), 2, 0, 47, null);
         
      	if (ResultsMap.size() <= 0) {
      		// No results to return
@@ -294,11 +390,11 @@ public class Rib {
 		StringBuilder query = new StringBuilder();
 		
 		// Query first for the prefix/len
-		query.append("SELECT distinct prefix,prefix_len FROM rib force index (idx_range_prefix_bin)\n");
+		query.append("SELECT distinct prefix,prefix_len FROM rib force index (idx_prefix_bin)\n");
 		query.append("        WHERE prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
 		query.append("               and peer_hash_id = '"+ peerHashId + "'\n");
-        query.append("        ORDER BY prefix_bcast_bin limit 1\n");
+        query.append("         ORDER BY prefix_bin desc limit 1\n");
 		
 		long startTime = System.currentTimeMillis();
 		System.out.println("QUERY: \n" + query.toString() + "\n");

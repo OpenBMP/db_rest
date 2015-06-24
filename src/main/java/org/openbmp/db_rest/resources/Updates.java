@@ -73,10 +73,11 @@ public class Updates {
 		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT u.count as Count, rib.prefix as Prefix,rib.prefix_len as PrefixLen,\n");
-		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
+		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr,\n");
+		query.append("         u.peer_hash_id as peer_hash_id\n");
 		query.append("    FROM\n");
-		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,timestamp\n");
-		query.append("                FROM path_attr_log path  FORCE INDEX (idx_ts)\n"); 
+		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,timestamp,peer_hash_id\n");
+		query.append("                FROM path_attr_log path \n");
 		query.append("                WHERE path.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) and\n");
 		query.append("                      path.timestamp <= " + timestamp + "\n");
 		query.append("                GROUP BY rib_hash_id\n");
@@ -117,10 +118,10 @@ public class Updates {
 		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
 		query.append("    FROM\n");
 		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,path.timestamp\n");
-		query.append("                FROM path_attr_log path  FORCE INDEX (idx_ts) JOIN path_attrs p ON (path.path_attr_hash_id = p.hash_id)\n");
+		query.append("                FROM path_attr_log path JOIN path_attrs p ON (path.path_attr_hash_id = p.hash_id)\n");
 		query.append("                WHERE path.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) and\n");
 		query.append("                      path.timestamp <= " + timestamp + "\n");
-		query.append("                      AND peer_hash_id = '" + peerHashId + "'\n");
+		query.append("                      AND path.peer_hash_id = '" + peerHashId + "'\n");
 		query.append("                GROUP BY rib_hash_id\n");
 		query.append("                ORDER BY count DESC limit " + limit + "\n");
 		query.append("         ) u\n");
@@ -200,7 +201,7 @@ public class Updates {
 		query.append("      FROM path_attr_log JOIN path_attrs ON (path_attr_log.path_attr_hash_id = path_attrs.hash_id)\n"); 
 		query.append("      WHERE path_attr_log.timestamp >= date_sub(" + timestamp + ", interval " + 
 		 						(interval * limit) + " minute) and path_attr_log.timestamp <= " + timestamp + "\n");
-		query.append("          AND peer_hash_id = '" + peerHashId + "'\n");
+		query.append("          AND path_attr_log.peer_hash_id = '" + peerHashId + "'\n");
 		query.append("      GROUP BY IntervalTime\n");
 		query.append("      ORDER BY path_attr_log.timestamp desc");
 		

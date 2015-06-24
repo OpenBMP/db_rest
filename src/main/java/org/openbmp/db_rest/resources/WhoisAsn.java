@@ -80,7 +80,7 @@ public class WhoisAsn {
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
 		query.append("    FROM gen_whois_asn w LEFT JOIN \n");
-        query.append("         gen_asn_stats s ON (w.asn = s.asn) JOIN\n");
+        query.append("         gen_asn_stats s ON (w.asn = s.asn) LEFT JOIN\n");
         query.append("            (select max(s.timestamp) as ts,s.asn FROM gen_asn_stats s JOIN gen_whois_asn w\n");
         query.append("                ON (s.asn = w.asn)\n");
         query.append("                WHERE ");

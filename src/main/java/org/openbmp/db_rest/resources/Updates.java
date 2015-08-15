@@ -83,7 +83,7 @@ public class Updates {
 		query.append("                GROUP BY rib_hash_id\n");
 		query.append("                ORDER BY count DESC limit " + limit + "\n");
 		query.append("         ) u\n");
-		query.append("         JOIN rib ON (u.rib_hash_id = rib.hash_id)\n");
+		query.append("         JOIN rib ON (u.rib_hash_id = rib.hash_id )\n");
 		query.append("         JOIN bgp_peers p ON (rib.peer_hash_id = p.hash_id)\n");
 		query.append("         JOIN routers r on (r.hash_id = p.router_hash_id)\n");
 		query.append("         ORDER BY u.count DESC\n");
@@ -118,7 +118,7 @@ public class Updates {
 		query.append("         if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
 		query.append("    FROM\n");
 		query.append("         (SELECT count(rib_hash_id) as count, rib_hash_id,path_attr_hash_id,path.timestamp\n");
-		query.append("                FROM path_attr_log path JOIN path_attrs p ON (path.path_attr_hash_id = p.hash_id)\n");
+		query.append("                FROM path_attr_log path JOIN path_attrs p ON (path.path_attr_hash_id = p.hash_id and path.peer_hash_id = p.peer_hash_id)\n");
 		query.append("                WHERE path.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) and\n");
 		query.append("                      path.timestamp <= " + timestamp + "\n");
 		query.append("                      AND path.peer_hash_id = '" + peerHashId + "'\n");
@@ -198,7 +198,7 @@ public class Updates {
 		query.append("select from_unixtime(unix_timestamp(path_attr_log.timestamp) - unix_timestamp(path_attr_log.timestamp) % " 
 								+ (interval * 60) + ") as IntervalTime,\n");
 		query.append("               count(rib_hash_id) as Count\n");
-		query.append("      FROM path_attr_log JOIN path_attrs ON (path_attr_log.path_attr_hash_id = path_attrs.hash_id)\n"); 
+		query.append("      FROM path_attr_log JOIN path_attrs ON (path_attr_log.path_attr_hash_id = path_attrs.hash_id and path_attr_log.peer_hash_id = path_attrs.peer_hash_id)\n");
 		query.append("      WHERE path_attr_log.timestamp >= date_sub(" + timestamp + ", interval " + 
 		 						(interval * limit) + " minute) and path_attr_log.timestamp <= " + timestamp + "\n");
 		query.append("          AND path_attr_log.peer_hash_id = '" + peerHashId + "'\n");

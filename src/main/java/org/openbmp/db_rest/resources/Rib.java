@@ -125,9 +125,8 @@ public class Rib {
             query.append("    path.ext_community_list AS ExtCommunities,\n");
             query.append("    		path.cluster_list AS ClusterList,path.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,\n");
             query.append("    p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
-            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
             query.append("    r.hash_id as rib_hash_id,\n");
-            query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn\n");
+            query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,\n");
             query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
         }
 
@@ -181,9 +180,8 @@ public class Rib {
             query.append("    path.ext_community_list AS ExtCommunities,\n");
             query.append("    		path.cluster_list AS ClusterList,path.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,\n");
             query.append("    p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
-            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
             query.append("    r.hash_id as rib_hash_id,\n");
-            query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn\n");
+            query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,\n");
             query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
         }
 
@@ -222,8 +220,8 @@ public class Rib {
 					"{ \"error\": \"Missing required path parameter\" }").build();
 		
 		StringBuilder query = new StringBuilder();
-		query.append("select count(Prefix) as PrefixCount FROM v_routes where Origin_AS = " + asn);
-		
+		query.append("select count(distinct prefix,prefix_len) as PrefixCount from rib where origin_as = " + asn + " and isWithdrawn = False");
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 		
 		return RestResponse.okWithBody(

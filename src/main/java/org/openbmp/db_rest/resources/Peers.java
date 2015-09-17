@@ -451,7 +451,7 @@ public class Peers {
 	@Produces("application/json")
 	public Response getPeersStatusUp(@QueryParam("withgeo") Boolean withGeo) {
 
-		String query = buildQuery_v_peers("isUp = 1",  null, null, withGeo);
+		String query = buildQuery_v_peers("isUp = 1 and isBMPConnected = 1",  null, null, withGeo);
 		
 		return RestResponse.okWithBody(
 				DbUtils.select_DbToJson(mysql_ds, query));

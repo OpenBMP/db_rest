@@ -341,8 +341,8 @@ public class Rib {
 		
 		// Query first for the prefix/len
 		query.append("SELECT distinct prefix,prefix_len \n");
-		query.append("        FROM rib force index (idx_prefix_bin)\n");
-		query.append("        WHERE prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
+		query.append("        FROM rib\n");
+		query.append("        WHERE isWithdrawn = False and prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
         query.append("        ORDER BY prefix_bin desc limit 1\n");
 		
@@ -388,8 +388,8 @@ public class Rib {
 		StringBuilder query = new StringBuilder();
 		
 		// Query first for the prefix/len
-		query.append("SELECT distinct prefix,prefix_len FROM rib force index (idx_prefix_bin)\n");
-		query.append("        WHERE prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
+		query.append("SELECT distinct prefix,prefix_len FROM rib\n");
+		query.append("        WHERE isWithdrawn = False and prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
 		query.append("               and peer_hash_id = '"+ peerHashId + "'\n");
         query.append("         ORDER BY prefix_bin desc limit 1\n");

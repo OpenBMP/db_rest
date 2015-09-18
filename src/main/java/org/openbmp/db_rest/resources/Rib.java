@@ -28,6 +28,7 @@ import javax.ws.rs.core.UriInfo;
 import org.openbmp.db_rest.DbColumnDef;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
+import org.openbmp.db_rest.helpers.IpAddr;
 
 @Path("/rib")
 public class Rib {
@@ -333,14 +334,17 @@ public class Rib {
 	@Path("/lookup/{IP}")
 	@Produces("application/json")
 	public Response getRibByLookup(@PathParam("IP") String ip,
-						   @QueryParam("limit") Integer limit,
-						   @QueryParam("where") String where,
-						   @QueryParam("orderby") String orderby) {
+						           @QueryParam("limit") Integer limit,
+						           @QueryParam("where") String where,
+                                   @QueryParam("aggregates") Boolean agg,
+                                   @QueryParam("distinct") Boolean distinct,
+						           @QueryParam("orderby") String orderby) {
 		
 		StringBuilder query = new StringBuilder();
-		
+
+
 		// Query first for the prefix/len
-		query.append("SELECT distinct prefix,prefix_len \n");
+		query.append("SELECT distinct prefix,prefix_len,prefix_bits \n");
 		query.append("        FROM rib\n");
 		query.append("        WHERE isWithdrawn = False and prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
@@ -362,17 +366,70 @@ public class Rib {
      		// Query v_routes for the prefix found
      		String prefix = ResultsMap.entrySet().iterator().next().getValue().get(0).getValue();
      		String prefix_len = ResultsMap.entrySet().iterator().next().getValue().get(1).getValue();
+            String prefix_bits = ResultsMap.entrySet().iterator().next().getValue().get(2).getValue();
      		
-     		StringBuilder where_str = new StringBuilder();
-     		where_str.append("prefix = \"" + prefix + "\"");
-     		where_str.append(" AND prefixlen = " + prefix_len);
-     				
-     		if (where != null)
-				where_str.append(" and " + where);
-			
+     		query = new StringBuilder();
+
+/*            query.append("SELECT if (length(rtr.name) > 0, rtr.name, rtr.ip_address) AS RouterName, \n");
+            query.append("       if(length(p.name) > 0, p.name, p.peer_addr) AS PeerName,\n");
+            query.append("       r.prefix AS Prefix,r.prefix_len AS PrefixLen,\n");
+            query.append("       path.origin AS Origin,r.origin_as AS Origin_AS,path.med AS MED,\n");
+            query.append("       path.local_pref AS LocalPref,path.next_hop AS NH,path.as_path AS AS_Path,\n");
+            query.append("       path.as_path_count AS ASPath_Count,path.community_list AS Communities,\n");
+            query.append("       path.ext_community_list AS ExtCommunities,path.cluster_list AS ClusterList,\n");
+            query.append("       path.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,\n");
+            query.append("       r.isIPv4 as isIPv4,p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
+            query.append("       r.timestamp` AS `LastModified`, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+            query.append("       r.hash_id as rib_hash_id,\n");
+            query.append("       r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn\n\n");
+
+            query.append("   FROM bgp_peers p JOIN rib r ON (r.peer_hash_id = p.hash_id) \n");
+            query.append("       JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id)\n");
+            query.append("       JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
+
+            query.append("   WHERE r.isWithdrawn = False\n");*/
+
+            if (agg == null) {
+                query.append(" prefix = \"" + prefix + "\"");
+                query.append(" AND prefixlen = " + prefix_len);
+
+            } else {
+
+
+                String ip_bits = IpAddr.getIpBits(prefix);
+
+                query.append(" prefix_bits IN (");
+                for (int len = ip_bits.length(); len > 0; len-- ) {
+                    query.append("'" + ip_bits.substring(0,len) + "'");
+
+                    if (len > 1) {
+                        query.append(',');
+                    }
+                }
+
+                query.append(") ");
+            }
+
+     		if (where != null) {
+                query.append(" and " + where);
+            }
+
+            if (distinct != null) {
+                query.append(" GROUP BY prefix,prefixlen");
+            }
+
+            if (orderby == null && agg != null) {
+                orderby = " prefixlen desc";
+            }
+
 			return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str.toString(), orderby,
+					DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit,
+                            query.toString() /* where str without the WHERE statement */, orderby,
 							(System.currentTimeMillis() - startTime)));
+
+           /* return RestResponse.okWithBody(
+                    DbUtils.select_DbToJson(mysql_ds, query.toString()));*/
+
      	}
 	}
 	
@@ -380,15 +437,17 @@ public class Rib {
 	@Path("/peer/{peerHashId}/lookup/{IP}")
 	@Produces("application/json")
 	public Response getRibByLookupByPeer(@PathParam("IP") String ip,
-						   @PathParam("peerHashId") String peerHashId,
-						   @QueryParam("limit") Integer limit,
-						   @QueryParam("where") String where,
-						   @QueryParam("orderby") String orderby) {
+						                 @PathParam("peerHashId") String peerHashId,
+						                 @QueryParam("limit") Integer limit,
+						                 @QueryParam("where") String where,
+                                         @QueryParam("aggregates") Boolean agg,
+                                         @QueryParam("distinct") Boolean distinct,
+						                 @QueryParam("orderby") String orderby) {
 		
 		StringBuilder query = new StringBuilder();
 		
 		// Query first for the prefix/len
-		query.append("SELECT distinct prefix,prefix_len FROM rib\n");
+		query.append("SELECT distinct prefix,prefix_len,prefix_bits FROM rib\n");
 		query.append("        WHERE isWithdrawn = False and prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
 		query.append("               and peer_hash_id = '"+ peerHashId + "'\n");
@@ -406,21 +465,52 @@ public class Rib {
      	} 
      	
      	else {
-     		// Query v_routes for the prefix found
-     		String prefix = ResultsMap.entrySet().iterator().next().getValue().get(0).getValue();
-     		String prefix_len = ResultsMap.entrySet().iterator().next().getValue().get(1).getValue();
-     		
-     		StringBuilder where_str = new StringBuilder();
-     		where_str.append("peer_hash_id = '" + peerHashId + "'\n");
-     		where_str.append("and prefix = \"" + prefix + "\"");
-     		where_str.append(" AND prefixlen = " + prefix_len);
-     				
-     		if (where != null)
-				where_str.append(" and " + where);
-			
-			return RestResponse.okWithBody(
-					DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str.toString(), orderby,
-							(System.currentTimeMillis() - startTime)));
+            // Query v_routes for the prefix found
+            String prefix = ResultsMap.entrySet().iterator().next().getValue().get(0).getValue();
+            String prefix_len = ResultsMap.entrySet().iterator().next().getValue().get(1).getValue();
+            String prefix_bits = ResultsMap.entrySet().iterator().next().getValue().get(2).getValue();
+
+            query = new StringBuilder();
+            query.append(" peer_hash_id = '" + peerHashId + "' AND \n");
+
+            if (agg == null) {
+
+                query.append(" prefix = \"" + prefix + "\"");
+                query.append(" AND prefixlen = " + prefix_len);
+
+            } else {
+
+
+                String ip_bits = IpAddr.getIpBits(prefix);
+
+                query.append(" prefix_bits IN (");
+                for (int len = ip_bits.length(); len > 0; len-- ) {
+                    query.append("'" + ip_bits.substring(0,len) + "'");
+
+                    if (len > 1) {
+                        query.append(',');
+                    }
+                }
+
+                query.append(") ");
+            }
+
+            if (where != null) {
+                query.append(" and " + where);
+            }
+
+            if (distinct != null) {
+                query.append(" GROUP BY prefix,prefixlen");
+            }
+
+            if (orderby == null && agg != null) {
+                orderby = " prefixlen desc";
+            }
+
+            return RestResponse.okWithBody(
+                    DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit,
+                            query.toString() /* where str without the WHERE statement */, orderby,
+                            (System.currentTimeMillis() - startTime)));
      	}
 	}
 	
@@ -483,7 +573,6 @@ public class Rib {
 				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes_history", limit, where_str, orderby));
 	}
 
-	
 	/**
 	 * Cleanup
 	 */

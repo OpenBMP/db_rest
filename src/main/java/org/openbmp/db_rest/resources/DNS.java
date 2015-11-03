@@ -7,8 +7,7 @@ import org.openbmp.db_rest.RestResponse;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -19,8 +18,8 @@ import java.net.UnknownHostException;
 public class DNS {
 
     @GET
-    @Produces("application/json")
-    public Response getDNS(@QueryParam("hostname") String hostname) {
+    @Path("/{hostname}")
+    public Response getDNS(@PathParam("hostname") String hostname) {
         try {
             InetAddress[] inetAddress = InetAddress.getAllByName(hostname);
 
@@ -30,14 +29,14 @@ public class DNS {
                 JsonGenerator jgen = jfac.createJsonGenerator(stringWriter);
                 jgen.writeStartObject(); //root object
                 jgen.writeArrayFieldStart("data");
-                jgen.writeStartObject(); // hostname array object
                 int i = 0;
                 for (InetAddress host : inetAddress) {
+                    jgen.writeStartObject(); // single array object
                     jgen.writeFieldName("IPAddr" + i);
                     jgen.writeString(host.getHostAddress());
+                    jgen.writeEndObject(); // end of array object
                     i++;
                 }
-                jgen.writeEndObject(); // end of array object
                 jgen.writeEndArray();
                 jgen.writeEndObject(); // enf of root
                 jgen.close();

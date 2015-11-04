@@ -554,23 +554,61 @@ public class Rib {
 								  @QueryParam("where") String where,
 								  @QueryParam("orderby") String orderby) {
 		
+//		if (length < 1 || length > 128)
+//			length = 32;
+//
+//		String	where_str = "peer_hash_id = '"+ peerHashId + "' and Prefix = '" + prefix + "' and PrefixLen = " + length;
+//
+//		if (days != null && days >= 15)
+//			where_str += " and LastModified >= date_sub(current_timestamp, interval " + days + " day)";
+//		else
+//			where_str += " and LastModified >= date_sub(current_timestamp, interval 2 day)";
+//
+//		where_str += " and LastModified <= current_timestamp ";
+//
+//		if (where != null)
+//			where_str += " and " + where;
+//
+//		return RestResponse.okWithBody(
+//				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes_history", limit, where_str, orderby));
+		return getRibTypeByPeer(prefix, peerHashId, length, limit, days, where, orderby, "history");
+	}
+
+	@GET
+	@Path("/peer/{peerHashId}/withdraws/{prefix}/{length}")
+	@Produces("application/json")
+	public Response getRibWithdrawnsByPeer(@PathParam("prefix") String prefix,
+										   @PathParam("peerHashId") String peerHashId,
+										   @PathParam("length") Integer length,
+										   @QueryParam("limit") Integer limit,
+										   @QueryParam("days") Integer days,
+										   @QueryParam("where") String where,
+										   @QueryParam("orderby") String orderby) {
+		return getRibTypeByPeer(prefix, peerHashId, length, limit, days, where, orderby, "withdraws");
+	}
+
+	private Response getRibTypeByPeer(String prefix, String peerHashId, Integer length,
+									  Integer limit, Integer days, String where, String orderby,
+									  String type) {
 		if (length < 1 || length > 128)
 			length = 32;
-		
+
 		String	where_str = "peer_hash_id = '"+ peerHashId + "' and Prefix = '" + prefix + "' and PrefixLen = " + length;
-		
+
 		if (days != null && days >= 15)
-			where_str += " and LastModified >= date_sub(current_timestamp, interval " + days + " day)";		
+			where_str += " and LastModified >= date_sub(current_timestamp, interval " + days + " day)";
 		else
 			where_str += " and LastModified >= date_sub(current_timestamp, interval 2 day)";
-		
+
 		where_str += " and LastModified <= current_timestamp ";
-		
+
 		if (where != null)
 			where_str += " and " + where;
-		
+
+		String tableName = "v_routes_" + type;
 		return RestResponse.okWithBody(
-				DbUtils.selectStar_DbToJson(mysql_ds, "v_routes_history", limit, where_str, orderby));
+				DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, where_str, orderby)
+		);
 	}
 
 	/**

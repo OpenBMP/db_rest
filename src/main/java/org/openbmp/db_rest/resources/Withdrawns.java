@@ -53,44 +53,66 @@ public class Withdrawns {
 		}
 	}
 
-	@GET
-	@Path("/top")
-	@Produces("application/json")
-	public Response getWithdrawnTop(@QueryParam("limit") Integer limit, 
-			                    @QueryParam("hours") Integer hours, 
-			                    @QueryParam("ts") String timestamp) {
-		
-		if (hours == null || hours >= 72 || hours < 1)
-			hours = 2;
-		
-		if (limit == null || limit > 100 || limit < 1)
-			limit = 25;
-		
-		if (timestamp == null || timestamp.length() < 1)
-			timestamp = "current_timestamp";
-		else
-			timestamp = "'" + timestamp + "'";
-		
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT log.count as Count, log.prefix as Prefix,log.prefix_len as PrefixLen,\n");
-		query.append("          if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
-		query.append("    FROM\n");
-		query.append("         (SELECT count(prefix) as count,prefix,prefix_len,peer_hash_id, timestamp\n");
-		query.append("             FROM withdrawn_log log  FORCE INDEX (idx_ts)\n");
-		query.append("             WHERE log.timestamp >= date_sub(current_timestamp, interval 2 hour) and\n");
-		query.append("                 log.timestamp <= current_timestamp\n");
-        query.append("             GROUP BY prefix,prefix_len\n");
-        query.append("             ORDER BY count DESC limit 25\n");
-        query.append("         ) log\n");
-        query.append("    JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
-        query.append("    JOIN routers r on (r.hash_id = p.router_hash_id)\n");
-        query.append("    ORDER BY log.count DESC\n");
-		
-		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
-		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
-	}
+    @GET
+    @Path("/top")
+    @Produces("application/json")
+    public Response getWithdrawsTop(@QueryParam("searchby") String searchBy,
+                                    @QueryParam("term") String term,
+                                    @QueryParam("groupby") String groupBy,
+                                    @QueryParam("limit") Integer limit,
+                                    @QueryParam("hours") Integer hours,
+                                    @QueryParam("ts") String timestamp) {
+
+        if(term.equals("null"))
+            term=null;
+        if(searchBy.equals("null"))
+            searchBy=null;
+
+        //term is fullprefix or peer_hash
+
+        if (groupBy == null || groupBy.isEmpty())
+            groupBy = "prefix";
+
+        if (groupBy.toLowerCase().equals("peer"))
+            groupBy = "peer_hash_id";
+        else if (groupBy.toLowerCase().equals("prefix"))
+            groupBy = "prefix,prefix_len";
+
+        if (hours == null || hours >= 72 || hours < 1)
+            hours = 2;
+
+        if (limit == null || limit > 100 || limit < 1)
+            limit = 20;
+
+        if (timestamp == null || timestamp.length() < 1)
+            timestamp = "current_timestamp";
+        else
+            timestamp = "'" + timestamp + "'";
+
+        StringBuilder query = new StringBuilder();
+        query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr,count(*) as Count, log.peer_hash_id as peer_hash_id\n");
+        query.append("FROM withdrawn_log log\n");
+        query.append("JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
+        query.append("WHERE log.timestamp >= date_sub(" + timestamp + ", interval "+hours+" hour) AND log.timestamp <= " + timestamp + "\n");
+        if(term!=null && !term.isEmpty()) {
+            if (searchBy!=null&&searchBy.equals("prefix")) {
+                String[] prefix = term.split("/");
+                query.append("                     AND (log.prefix = \"" + prefix[0] + "\")\n");
+                query.append("                     AND (log.prefix_len = \"" + prefix[1] + "\")\n");
+            }
+            else
+            if(searchBy!=null&&searchBy.equals("peer"))
+                query.append("                     AND (log.peer_hash_id = \"" + term + "\")\n");
+        }
+        query.append("GROUP BY " + groupBy +"\n");
+        query.append("ORDER BY Count desc\n");
+        query.append("LIMIT " + limit + "\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
 	
 	@GET
 	@Path("/peer/{peerHashId}/top")
@@ -112,20 +134,31 @@ public class Withdrawns {
 			timestamp = "'" + timestamp + "'";
 		
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT log.count as Count, log.prefix as Prefix,log.prefix_len as PrefixLen,\n");
-		query.append("          if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
-		query.append("    FROM\n");
-		query.append("         (SELECT count(prefix) as count,prefix,prefix_len,peer_hash_id, timestamp\n");
-		query.append("             FROM withdrawn_log log  FORCE INDEX (idx_ts)\n");
-		query.append("             WHERE log.timestamp >= date_sub(current_timestamp, interval 2 hour) and\n");
-		query.append("                 log.timestamp <= current_timestamp\n");
-		query.append("                 AND log.peer_hash_id = '" + peerHashId + "'\n");
-        query.append("             GROUP BY prefix,prefix_len\n");
-        query.append("             ORDER BY count DESC limit 25\n");
-        query.append("         ) log\n");
-        query.append("    JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
-        query.append("    JOIN routers r on (r.hash_id = p.router_hash_id)\n");
-        query.append("    ORDER BY log.count DESC\n");
+//		query.append("SELECT log.count as Count, log.prefix as Prefix,log.prefix_len as PrefixLen,\n");
+//		query.append("          if (length(r.name) > 0, r.name, r.ip_address) as RouterName,p.peer_addr as PeerAddr\n");
+//		query.append("    FROM\n");
+//		query.append("         (SELECT count(prefix) as count,prefix,prefix_len,peer_hash_id, timestamp\n");
+//		query.append("             FROM withdrawn_log log  FORCE INDEX (idx_ts)\n");
+//		query.append("             WHERE log.timestamp >= date_sub(current_timestamp, interval 2 hour) and\n");
+//		query.append("                 log.timestamp <= current_timestamp\n");
+//		query.append("                 AND log.peer_hash_id = '" + peerHashId + "'\n");
+//      query.append("             GROUP BY prefix,prefix_len\n");
+//      query.append("             ORDER BY count DESC limit 25\n");
+//      query.append("         ) log\n");
+//      query.append("    JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
+//      query.append("    JOIN routers r on (r.hash_id = p.router_hash_id)\n");
+//      query.append("    ORDER BY log.count DESC\n");
+
+        query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr, count(*) as Count, log.peer_hash_id as peer_hash_id,\n");
+        query.append("         if(length(r.name)>0 , r.name, r.ip_address) as RouterName\n");
+        query.append("       FROM withdrawn_log log\n");
+        query.append("       JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
+        query.append("       JOIN routers r ON (r.hash_id = p.router_hash_id)\n");
+        query.append("       WHERE log.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) AND log.timestamp <= " + timestamp + "\n");
+        query.append("             AND log.peer_hash_id = '" + peerHashId + "'\n");
+        query.append("       GROUP BY prefix,prefix_len\n");
+        query.append("       ORDER BY Count desc\n");
+        query.append("       LIMIT " + limit + "\n");
 
 		
 		System.out.println("QUERY: \n" + query.toString() + "\n");
@@ -192,7 +225,6 @@ public class Withdrawns {
 		else
 			timestamp = "'" + timestamp + "'";
 
-		
 		StringBuilder query = new StringBuilder();
 		query.append("select from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " + 
 							(interval * 60) + ") as IntervalTime,\n");

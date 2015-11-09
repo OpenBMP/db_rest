@@ -254,17 +254,13 @@ public class Withdrawns {
 	public Response getWithdrawsOverTime(@QueryParam("searchPeer") String searchPeer,
 									   @QueryParam("searchPrefix") String searchPrefix,
 									   @PathParam("minutes") Integer minutes,
-									   @QueryParam("limit") Integer limit,
+									   @QueryParam("hours") Integer hours,
 									   @QueryParam("ts") String timestamp) {
 
 		if (searchPeer!=null&&searchPeer.equals("null"))
 			searchPeer = null;
 		if (searchPrefix!=null&&searchPrefix.equals("null"))
 			searchPrefix = null;
-
-
-		if (limit == null || limit > 100 || limit < 1)
-			limit = 25;
 
 		Integer interval = 5;
 		if (minutes >= 1 && minutes <= 300) {
@@ -277,11 +273,11 @@ public class Withdrawns {
 			timestamp = "'" + timestamp + "'";
 
 		StringBuilder query = new StringBuilder();
-		query.append("select from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " +
+		query.append("SELECT from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " +
 				(interval * 60) + ") as IntervalTime,\n");
-		query.append("                   count(peer_hash_id) as Count\n");
+		query.append("               count(*) as Count\n");
 		query.append("     FROM withdrawn_log\n");
-		query.append("     WHERE timestamp >= date_sub(" + timestamp + ", interval " + (interval * limit) + " minute)\n");
+		query.append("     WHERE timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour)\n");
 		query.append("             and timestamp <= " + timestamp + "\n");
 		if(searchPeer!=null && !searchPeer.isEmpty()) {
 			query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");

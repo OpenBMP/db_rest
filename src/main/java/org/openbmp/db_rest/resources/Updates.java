@@ -99,10 +99,13 @@ public class Updates {
             timestamp = "'" + timestamp + "'";
 
         StringBuilder query = new StringBuilder();
-        query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr, count(*) as Count, log.peer_hash_id as peer_hash_id\n");
-        query.append("      FROM path_attr_log log\n");
+        query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr, count(*) as Count, log.peer_hash_id as peer_hash_id,\n");
+		query.append("       r.name as RouterName, r.ip_address as RouterAddr, c.name as CollectorName, c.ip_address as CollectorAddr, c.admin_id as CollectorAdminID\n");
+		query.append("      FROM path_attr_log log\n");
         query.append("      JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
-        query.append("      WHERE log.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) AND log.timestamp <= " + timestamp + "\n");
+		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
+		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
+		query.append("      WHERE log.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) AND log.timestamp <= " + timestamp + "\n");
 		if(searchPeer!=null && !searchPeer.isEmpty()) {
 			query.append("                     AND (log.peer_hash_id = \"" + searchPeer + "\")\n");
 		}
@@ -111,7 +114,7 @@ public class Updates {
 			query.append("                     AND (log.prefix = \"" + prefix[0] + "\")\n");
 			query.append("                     AND (log.prefix_len = \"" + prefix[1] + "\")\n");
 		}
-        query.append("      GROUP BY " + groupBy+"\n");
+        query.append("      GROUP BY c.hash_id, r.hash_id," + groupBy+"\n");
         query.append("      ORDER BY Count desc\n");
         query.append("      LIMIT " + limit + "\n");
 

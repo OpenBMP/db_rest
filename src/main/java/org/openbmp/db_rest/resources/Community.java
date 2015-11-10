@@ -15,6 +15,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Path("/community")
 public class Community {
@@ -51,10 +53,21 @@ public class Community {
         }
 
         StringBuilder queryBuilder = new StringBuilder();
+
         if (community != null) {
+            Pattern p = Pattern.compile("^[0-9]+:[0-9]+$");
+            Matcher m = p.matcher(community);
+
             queryBuilder.append("SELECT prefix, prefix_len FROM rib AS r, community_analysis AS ca ");
             queryBuilder.append("WHERE r.path_attr_hash_id = ca.path_attr_hash_id AND r.peer_hash_id = ca.peer_hash_id ");
-            queryBuilder.append("AND ca.community = '" + community + "'");
+            if (community.contains("%")){
+                queryBuilder.append("AND ca.community LIKE '" + community + "'");
+            } else if (m.matches()) {
+                queryBuilder.append("AND ca.community = '" + community + "'");
+            } else {
+                queryBuilder.append("AND ca.community REGEXP '" + community + "'");
+            }
+
         } else if (p1 != null && isForP2) {
             queryBuilder.append("SELECT DISTINCT part2 FROM community_analysis WHERE part1 = '" + p1 + "'");
         } else if (p1 != null && !isForP2) {
@@ -82,7 +95,7 @@ public class Community {
      * @return a list of second part
      */
     @GET
-    @Path("/getP2/{p1}")
+    @Path("/part2/{p1}")
     @Produces("application/json")
     public Response getCommP2byP1(@PathParam("p1") Integer p1,
                                   @QueryParam("limit") Integer limit) {
@@ -96,7 +109,7 @@ public class Community {
      * @return a list of part1 starts with p1
      */
     @GET
-    @Path("/getP1/{p1}")
+    @Path("/part1/{p1}")
     @Produces("application/json")
     public Response getP1(@PathParam("p1") Integer p1,
                           @QueryParam("limit") Integer limit) {

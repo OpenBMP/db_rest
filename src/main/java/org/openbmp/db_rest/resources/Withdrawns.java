@@ -114,7 +114,7 @@ public class Withdrawns {
             query.append("                     AND (log.prefix = \"" + prefix[0] + "\")\n");
             query.append("                     AND (log.prefix_len = \"" + prefix[1] + "\")\n");
         }
-		query.append("      GROUP BY c.hash_id, r.hash_id," + groupBy+"\n");
+		query.append("      GROUP BY r.hash_id," + groupBy+"\n");
         query.append("      ORDER BY Count desc\n");
         query.append("      LIMIT " + limit + "\n");
 

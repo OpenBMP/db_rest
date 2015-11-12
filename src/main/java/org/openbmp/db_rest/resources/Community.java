@@ -13,6 +13,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -58,18 +59,19 @@ public class Community {
             Pattern p = Pattern.compile("^[0-9]+:[0-9]+$");
             Matcher m = p.matcher(community);
 
-            queryBuilder.append("SELECT prefix, prefix_len FROM rib AS r, community_analysis AS ca ");
-            queryBuilder.append("WHERE r.path_attr_hash_id = ca.path_attr_hash_id AND r.peer_hash_id = ca.peer_hash_id ");
+            queryBuilder.append("SELECT peer_hash_id, path_attr_hash_id FROM community_analysis AS ca WHERE ");
             if (community.contains("%")){
-                queryBuilder.append("AND ca.community LIKE '" + community + "'");
+                queryBuilder.append("ca.community LIKE '" + community + "'");
             } else if (m.matches()) {
-                queryBuilder.append("AND ca.community = '" + community + "'");
+                queryBuilder.append("ca.community = '" + community + "'");
             } else {
-                queryBuilder.append("AND ca.community REGEXP '" + community + "'");
+                queryBuilder.append("ca.community REGEXP '" + community + "'");
             }
 
         } else if (p1 != null && isForP2) {
-            queryBuilder.append("SELECT DISTINCT part2 FROM community_analysis WHERE part1 = '" + p1 + "'");
+            queryBuilder.append("SELECT DISTINCT part2, community, count(*) as count FROM community_analysis WHERE part1 = '"
+                    + p1
+                    + "' group by community order by count desc");
         } else if (p1 != null && !isForP2) {
             queryBuilder.append("SELECT DISTINCT part1 FROM community_analysis WHERE part1 LIKE '" + p1 + "%'");
         }
@@ -81,6 +83,26 @@ public class Community {
         long startTime = System.currentTimeMillis();
         Map<String,List<DbColumnDef>> AggRows;
         AggRows = DbUtils.selectPartitions_DbToMap(mysql_ds, queryBuilder.toString(), limit, 0, 47, null);
+
+        if (community != null) {
+            Map<String, List<DbColumnDef>> resultMap = new HashMap();
+            for (List<DbColumnDef> row : AggRows.values()) {
+                queryBuilder = new StringBuilder();
+                queryBuilder.append("SELECT Prefix, PrefixLen, RouterName, PeerName, AS_Path, Communities FROM v_routes WHERE ");
+                queryBuilder.append("peer_hash_id = '" + row.get(0).getValue() + "' ");
+                queryBuilder.append("AND path_hash_id = '" + row.get(1).getValue() + "'");
+                if (limit != null)
+                    queryBuilder.append(limit_str);
+                Map<String, List<DbColumnDef>> dbResult = DbUtils.select_DbToMap(mysql_ds, queryBuilder.toString());
+                if (!dbResult.isEmpty()) {
+                    for (Map.Entry<String, List<DbColumnDef>> entry : dbResult.entrySet()) {
+                        resultMap.put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+            String result = DbUtils.DbMapToJson("Community", resultMap,  System.currentTimeMillis()-startTime);
+            return RestResponse.okWithBody(result);
+        }
 
         // Format map into json and return result
         String output = DbUtils.DbMapToJson("Community", AggRows, (System.currentTimeMillis() - startTime));

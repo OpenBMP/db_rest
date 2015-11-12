@@ -59,8 +59,8 @@ public class Withdrawns {
      * @param searchPrefix Filter the result with a prefix
      * @param groupBy Groups the result by Peer IP or by prefix and prefix_len
      * @param limit Limit of the data
-     * @param hours Within x hours of the timestamp
-     * @param timestamp Given to address time period
+     * @param startTimestamp The beginning of the desired time period
+     * @param endTimestamp The end of the desired time period
      * @return The top limited number of withdraws grouped by peer or prefix in before given hours of a given timestamp
      */
     @GET
@@ -70,8 +70,8 @@ public class Withdrawns {
                                     @QueryParam("searchPrefix") String searchPrefix,
                                     @QueryParam("groupBy") String groupBy,
                                     @QueryParam("limit") Integer limit,
-                                    @QueryParam("hours") Integer hours,
-                                    @QueryParam("ts") String timestamp) {
+									@QueryParam("startTs") String startTimestamp,
+									@QueryParam("endTs") String endTimestamp) {
 
         if (searchPeer!=null&&searchPeer.equals("null"))
             searchPeer = null;
@@ -86,25 +86,26 @@ public class Withdrawns {
         else if (groupBy.toLowerCase().equals("prefix"))
             groupBy = "prefix,prefix_len";
 
-        if (hours == null || hours >= 72 || hours < 1)
-            hours = 2;
-
         if (limit == null || limit > 100 || limit < 1)
             limit = 20;
 
-        if (timestamp == null || timestamp.length() < 1)
-            timestamp = "current_timestamp";
-        else
-            timestamp = "'" + timestamp + "'";
+		if (endTimestamp == null || endTimestamp.length() < 1)
+			endTimestamp = "current_timestamp";
+		else
+			endTimestamp="'" + endTimestamp + "'";
+		if (startTimestamp==null||startTimestamp.length()<1)
+			startTimestamp= "date_sub(" + endTimestamp + ", interval " + 2 + " hour)";
+		else
+			startTimestamp="'" + startTimestamp + "'";
 
-        StringBuilder query = new StringBuilder();
+		StringBuilder query = new StringBuilder();
         query.append("      SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr,count(*) as Count, log.peer_hash_id as peer_hash_id,\n");
 		query.append("       r.name as RouterName, r.ip_address as RouterAddr, c.name as CollectorName, c.ip_address as CollectorAddr, c.admin_id as CollectorAdminID\n");
 		query.append("      FROM withdrawn_log log\n");
 		query.append("      JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
 		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
 		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
-		query.append("      WHERE log.timestamp >= date_sub(" + timestamp + ", interval "+hours+" hour) AND log.timestamp <= " + timestamp + "\n");
+		query.append("      WHERE log.timestamp >= "+startTimestamp +" AND log.timestamp <= " + endTimestamp + "\n");
         if(searchPeer!=null && !searchPeer.isEmpty()) {
             query.append("                     AND (log.peer_hash_id = \"" + searchPeer + "\")\n");
         }
@@ -257,8 +258,8 @@ public class Withdrawns {
 	public Response getWithdrawsOverTime(@QueryParam("searchPeer") String searchPeer,
 									   @QueryParam("searchPrefix") String searchPrefix,
 									   @PathParam("minutes") Integer minutes,
-									   @QueryParam("hours") Integer hours,
-									   @QueryParam("ts") String timestamp) {
+									   @QueryParam("startTs") String startTimestamp,
+									   @QueryParam("endTs") String endTimestamp) {
 
 		if (searchPeer!=null&&searchPeer.equals("null"))
 			searchPeer = null;
@@ -270,18 +271,22 @@ public class Withdrawns {
 			interval = minutes;
 		}
 
-		if (timestamp == null || timestamp.length() < 1)
-			timestamp = "current_timestamp";
+
+		if (endTimestamp == null || endTimestamp.length() < 1)
+			endTimestamp = "current_timestamp";
 		else
-			timestamp = "'" + timestamp + "'";
+			endTimestamp="'" + endTimestamp + "'";
+		if (startTimestamp==null||startTimestamp.length()<1)
+			startTimestamp= "date_sub(" + endTimestamp + ", interval " + 2 + " hour)";
+		else
+			startTimestamp="'" + startTimestamp + "'";
 
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " +
 				(interval * 60) + ") as IntervalTime,\n");
 		query.append("               count(*) as Count\n");
 		query.append("     FROM withdrawn_log\n");
-		query.append("     WHERE timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour)\n");
-		query.append("             and timestamp <= " + timestamp + "\n");
+		query.append("      WHERE timestamp >= "+startTimestamp +" AND timestamp <= " + endTimestamp + "\n");
 		if(searchPeer!=null && !searchPeer.isEmpty()) {
 			query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
 		}

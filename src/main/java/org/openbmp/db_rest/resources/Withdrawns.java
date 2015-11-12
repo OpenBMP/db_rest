@@ -77,6 +77,10 @@ public class Withdrawns {
             searchPeer = null;
         if (searchPrefix!=null&&searchPrefix.equals("null"))
             searchPrefix = null;
+		if (startTimestamp!=null&&startTimestamp.equals("null"))
+			startTimestamp = null;
+		if (endTimestamp!=null&&endTimestamp.equals("null"))
+			endTimestamp = null;
 
 		if ((groupBy == null || groupBy.isEmpty())||(groupBy!=null&&groupBy.equals("null")))
 			groupBy = "peer";
@@ -89,11 +93,11 @@ public class Withdrawns {
         if (limit == null || limit > 100 || limit < 1)
             limit = 20;
 
-		if (endTimestamp == null || endTimestamp.length() < 1)
+		if (endTimestamp == null || (endTimestamp!=null&&endTimestamp.length() < 1))
 			endTimestamp = "current_timestamp";
 		else
 			endTimestamp="'" + endTimestamp + "'";
-		if (startTimestamp==null||startTimestamp.length()<1)
+		if (startTimestamp==null || (startTimestamp!=null&&startTimestamp.length() < 1))
 			startTimestamp= "date_sub(" + endTimestamp + ", interval " + 2 + " hour)";
 		else
 			startTimestamp="'" + startTimestamp + "'";
@@ -265,6 +269,10 @@ public class Withdrawns {
 			searchPeer = null;
 		if (searchPrefix!=null&&searchPrefix.equals("null"))
 			searchPrefix = null;
+		if (startTimestamp!=null&&startTimestamp.equals("null"))
+			startTimestamp = null;
+		if (endTimestamp!=null&&endTimestamp.equals("null"))
+			endTimestamp = null;
 
 		Integer interval = 5;
 		if (minutes >= 1 && minutes <= 300) {
@@ -272,11 +280,11 @@ public class Withdrawns {
 		}
 
 
-		if (endTimestamp == null || endTimestamp.length() < 1)
+		if (endTimestamp == null || (endTimestamp!=null&&endTimestamp.length() < 1))
 			endTimestamp = "current_timestamp";
 		else
 			endTimestamp="'" + endTimestamp + "'";
-		if (startTimestamp==null||startTimestamp.length()<1)
+		if (startTimestamp==null || (startTimestamp!=null&&startTimestamp.length() < 1))
 			startTimestamp= "date_sub(" + endTimestamp + ", interval " + 2 + " hour)";
 		else
 			startTimestamp="'" + startTimestamp + "'";

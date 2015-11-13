@@ -60,8 +60,8 @@ public class Updates {
 	 * @param searchPrefix Filter the result with a prefix
 	 * @param groupBy Groups the result by Peer or by prefix and prefix_len
 	 * @param limit Limit of the data
-	 * @param hours Within x hours of the timestamp
-	 * @param timestamp Given to address time period
+     * @param startTimestamp The beginning of the desired time period
+     * @param endTimestamp The end of the desired time period
      * @return The top limited number of updates grouped by peer or prefix in before given hours of a given timestamp
      */
     @GET
@@ -71,13 +71,17 @@ public class Updates {
                                   @QueryParam("searchPrefix") String searchPrefix,
                                   @QueryParam("groupBy") String groupBy,
                                   @QueryParam("limit") Integer limit,
-                                  @QueryParam("hours") Integer hours,
-                                  @QueryParam("ts") String timestamp) {
+                                  @QueryParam("startTs") String startTimestamp,
+                                  @QueryParam("endTs") String endTimestamp) {
 
         if (searchPeer!=null&&searchPeer.equals("null"))
             searchPeer = null;
         if (searchPrefix!=null&&searchPrefix.equals("null"))
             searchPrefix = null;
+        if (startTimestamp!=null&&startTimestamp.equals("null"))
+            startTimestamp = null;
+        if (endTimestamp!=null&&endTimestamp.equals("null"))
+            endTimestamp = null;
 
         if ((groupBy == null || groupBy.isEmpty())||(groupBy!=null&&groupBy.equals("null")))
             groupBy = "peer";
@@ -87,22 +91,26 @@ public class Updates {
         else if (groupBy.toLowerCase().equals("prefix"))
             groupBy = "prefix,prefix_len";
 
-        if (hours == null || hours >= 72 || hours < 1)
-            hours = 2;
-
         if (limit == null || limit > 100 || limit < 1)
             limit = 20;
 
-        if (timestamp == null || timestamp.length() < 1)
-            timestamp = "current_timestamp";
+        if (endTimestamp == null || (endTimestamp!=null&&endTimestamp.length() < 1))
+            endTimestamp = "current_timestamp";
         else
-            timestamp = "'" + timestamp + "'";
+            endTimestamp="'" + endTimestamp + "'";
+        if (startTimestamp==null || (startTimestamp!=null&&startTimestamp.length() < 1))
+            startTimestamp= "date_sub(" + endTimestamp + ", interval " + 2 + " hour)";
+        else
+            startTimestamp="'" + startTimestamp + "'";
 
         StringBuilder query = new StringBuilder();
-        query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr, count(*) as Count, log.peer_hash_id as peer_hash_id\n");
-        query.append("      FROM path_attr_log log\n");
+        query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr, count(*) as Count, log.peer_hash_id as peer_hash_id,\n");
+		query.append("       r.name as RouterName, r.ip_address as RouterAddr, c.name as CollectorName, c.ip_address as CollectorAddr, c.admin_id as CollectorAdminID\n");
+		query.append("      FROM path_attr_log log\n");
         query.append("      JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
-        query.append("      WHERE log.timestamp >= date_sub(" + timestamp + ", interval " + hours + " hour) AND log.timestamp <= " + timestamp + "\n");
+		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
+		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
+        query.append("      WHERE log.timestamp >= "+startTimestamp +" AND log.timestamp <= " + endTimestamp + "\n");
 		if(searchPeer!=null && !searchPeer.isEmpty()) {
 			query.append("                     AND (log.peer_hash_id = \"" + searchPeer + "\")\n");
 		}
@@ -111,7 +119,7 @@ public class Updates {
 			query.append("                     AND (log.prefix = \"" + prefix[0] + "\")\n");
 			query.append("                     AND (log.prefix_len = \"" + prefix[1] + "\")\n");
 		}
-        query.append("      GROUP BY " + groupBy+"\n");
+        query.append("      GROUP BY r.hash_id," + groupBy+"\n");
         query.append("      ORDER BY Count desc\n");
         query.append("      LIMIT " + limit + "\n");
 
@@ -260,51 +268,58 @@ public class Updates {
 	}
 
 
-	@GET
-	@Path("/trend/interval/{minutes}")
-	@Produces("application/json")
-	public Response getUpdatesOverTime(@QueryParam("searchPeer") String searchPeer,
-									   @QueryParam("searchPrefix") String searchPrefix,
-									   @PathParam("minutes") Integer minutes,
-									   @QueryParam("hours") Integer hours,
-									   @QueryParam("ts") String timestamp) {
+    @GET
+    @Path("/trend/interval/{minutes}")
+    @Produces("application/json")
+    public Response getUpdatesOverTime(@QueryParam("searchPeer") String searchPeer,
+                                       @QueryParam("searchPrefix") String searchPrefix,
+                                       @PathParam("minutes") Integer minutes,
+                                       @QueryParam("startTs") String startTimestamp,
+                                       @QueryParam("endTs") String endTimestamp) {
 
-		if (searchPeer!=null&&searchPeer.equals("null"))
-			searchPeer = null;
-		if (searchPrefix!=null&&searchPrefix.equals("null"))
-			searchPrefix = null;
+        if (searchPeer!=null&&searchPeer.equals("null"))
+            searchPeer = null;
+        if (searchPrefix!=null&&searchPrefix.equals("null"))
+            searchPrefix = null;
+        if (startTimestamp!=null&&startTimestamp.equals("null"))
+            startTimestamp = null;
+        if (endTimestamp!=null&&endTimestamp.equals("null"))
+            endTimestamp = null;
 
-		Integer interval = 5;
-		if (minutes >= 1 && minutes <= 300) {
-			interval = minutes;
-		}
+        Integer interval = 5;
+        if (minutes >= 1 && minutes <= 300) {
+            interval = minutes;
+        }
 
-		if (timestamp == null || timestamp.length() < 1)
-			timestamp = "current_timestamp";
+		if (endTimestamp == null || (endTimestamp!=null&&endTimestamp.length() < 1))
+			endTimestamp = "current_timestamp";
 		else
-			timestamp = "'" + timestamp + "'";
+			endTimestamp="'" + endTimestamp + "'";
+		if (startTimestamp==null || (startTimestamp!=null&&startTimestamp.length() < 1))
+			startTimestamp= "date_sub(" + endTimestamp + ", interval " + 2 + " hour)";
+		else
+			startTimestamp="'" + startTimestamp + "'";
 
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % "
-				+ (interval * 60) + ") as IntervalTime,\n");
-		query.append("               count(*) as Count\n");
-		query.append("      FROM path_attr_log\n");
-		query.append("      WHERE timestamp >= date_sub(" + timestamp + ", interval " +
-				hours + " hour) and timestamp <= " + timestamp + "\n");
-		if(searchPeer!=null && !searchPeer.isEmpty()) {
-			query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
-		}
-		if(searchPrefix!=null && !searchPrefix.isEmpty()) {
-			String[] prefix = searchPrefix.split("/");
-			query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
-			query.append("                     AND (prefix_len = \"" + prefix[1] + "\")\n");
-		}
-		query.append("      GROUP BY IntervalTime\n");
-		query.append("      ORDER BY timestamp desc");
+        StringBuilder query = new StringBuilder();
+        query.append("SELECT from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % "
+                + (interval * 60) + ") as IntervalTime,\n");
+        query.append("               count(*) as Count\n");
+        query.append("      FROM path_attr_log\n");
+        query.append("      WHERE timestamp >= "+startTimestamp +" AND timestamp <= " + endTimestamp + "\n");
+        if(searchPeer!=null && !searchPeer.isEmpty()) {
+            query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
+        }
+        if(searchPrefix!=null && !searchPrefix.isEmpty()) {
+            String[] prefix = searchPrefix.split("/");
+            query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
+            query.append("                     AND (prefix_len = \"" + prefix[1] + "\")\n");
+        }
+        query.append("      GROUP BY IntervalTime\n");
+        query.append("      ORDER BY timestamp desc");
 
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+        System.out.println("QUERY: \n" + query.toString() + "\n");
 
-		return RestResponse.okWithBody(
-				DbUtils.select_DbToJson(mysql_ds, query.toString()));
-	}
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
 }

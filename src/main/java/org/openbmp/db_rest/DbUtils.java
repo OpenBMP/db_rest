@@ -77,7 +77,11 @@ public class DbUtils {
 		String where_st = "";
 		String orderby_st = "";
 		String output = "{}";
-		
+
+		if (where.contains("hour")) {
+			limit_st = "";
+		}
+
 		// Set the limit for the query 
 		if (limit != null && limit < 40000)
 			limit_st = " limit " + limit;

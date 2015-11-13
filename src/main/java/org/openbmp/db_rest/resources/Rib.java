@@ -584,13 +584,14 @@ public class Rib {
                 where_str += " and LastModified >= date_sub(current_timestamp, interval " + hours + " hour)";
             else
                 where_str += " and LastModified >= date_sub(current_timestamp, interval 2 hour)";
+			where_str += " and LastModified <= current_timestamp ";
         } else {  // replace default current_timestamp
             if (hours != null && hours >= 2)
                 where_str += " and LastModified >= date_sub('" + timestamp +"', interval " + hours + " hour)";
             else
                 where_str += " and LastModified >= date_sub('" + timestamp + "', interval 2 hour)";
+			where_str += " and LastModified <= '" + timestamp + "' ";
         }
-        where_str += " and LastModified <= current_timestamp ";
 
 		if (where != null)
 			where_str += " and " + where;

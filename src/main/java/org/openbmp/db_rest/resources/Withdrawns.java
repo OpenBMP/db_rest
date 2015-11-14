@@ -257,11 +257,11 @@ public class Withdrawns {
 	}
 
 	@GET
-	@Path("/trend/interval/{minutes}")
+	@Path("/trend/interval/{seconds}")
 	@Produces("application/json")
 	public Response getWithdrawsOverTime(@QueryParam("searchPeer") String searchPeer,
 									   @QueryParam("searchPrefix") String searchPrefix,
-									   @PathParam("minutes") Integer minutes,
+									   @PathParam("seconds") Float seconds,
 									   @QueryParam("startTs") String startTimestamp,
 									   @QueryParam("endTs") String endTimestamp) {
 
@@ -274,9 +274,9 @@ public class Withdrawns {
 		if (endTimestamp!=null&&endTimestamp.equals("null"))
 			endTimestamp = null;
 
-		Integer interval = 5;
-		if (minutes >= 1 && minutes <= 300) {
-			interval = minutes;
+		Float interval = 5 * 60f;
+		if (seconds >= 1 && seconds <= 300*60) {
+			interval = seconds;
 		}
 
 
@@ -291,7 +291,7 @@ public class Withdrawns {
 
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " +
-				(interval * 60) + ") as IntervalTime,\n");
+				interval + ") as IntervalTime,\n");
 		query.append("               count(*) as Count\n");
 		query.append("     FROM withdrawn_log\n");
 		query.append("      WHERE timestamp >= "+startTimestamp +" AND timestamp <= " + endTimestamp + "\n");

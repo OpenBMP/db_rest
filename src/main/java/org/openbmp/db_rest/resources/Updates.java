@@ -86,10 +86,10 @@ public class Updates {
         if ((groupBy == null || groupBy.isEmpty())||(groupBy!=null&&groupBy.equals("null")))
             groupBy = "peer";
 
-        if (groupBy.toLowerCase().equals("peer"))
-            groupBy = "peer_hash_id";
-        else if (groupBy.toLowerCase().equals("prefix"))
-            groupBy = "prefix,prefix_len";
+		if (groupBy.toLowerCase().equals("peer"))
+			groupBy = "log.peer_hash_id";
+		else if (groupBy.toLowerCase().equals("prefix"))
+			groupBy = "log.prefix,log.prefix_len";
 
         if (limit == null || limit > 100 || limit < 1)
             limit = 20;
@@ -106,10 +106,16 @@ public class Updates {
         StringBuilder query = new StringBuilder();
         query.append("SELECT log.prefix as Prefix,log.prefix_len as PrefixLen, p.name as PeerName, p.peer_addr as PeerAddr, count(*) as Count, log.peer_hash_id as peer_hash_id,\n");
 		query.append("       r.name as RouterName, r.ip_address as RouterAddr, c.name as CollectorName, c.ip_address as CollectorAddr, c.admin_id as CollectorAdminID\n");
+		if(groupBy.equals("log.prefix,log.prefix_len")){
+			query.append("      ,pfx.descr as PrefixDescr, pfx.origin_as as OriginAS\n");
+		}
 		query.append("      FROM path_attr_log log\n");
         query.append("      JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
 		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
 		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
+		if(groupBy.equals("log.prefix,log.prefix_len")){
+			query.append("      JOIN gen_whois_route pfx ON (inet6_aton(log.prefix) = pfx.prefix AND log.prefix_len = pfx.prefix_len)\n");
+		}
         query.append("      WHERE log.timestamp >= "+startTimestamp +" AND log.timestamp <= " + endTimestamp + "\n");
 		if(searchPeer!=null && !searchPeer.isEmpty()) {
 			query.append("                     AND (log.peer_hash_id = \"" + searchPeer + "\")\n");

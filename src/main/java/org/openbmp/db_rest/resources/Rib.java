@@ -581,7 +581,7 @@ public class Rib {
         }
 
 		where_str.append(" and LastModified <= current_timestamp ");
-		
+
 		if (where != null)
 			where_str.append(" and " + where);
 
@@ -597,7 +597,7 @@ public class Rib {
 		}
 
 		return RestResponse.okWithBody(
-				DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, where_str, orderby)
+				DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, where_str.toString(), orderby)
 		);
 	}
 

@@ -572,7 +572,6 @@ public class Rib {
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval " + hours + " hour)");
             else
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval 2 hour)");
-
         } else {  // replace default current_timestamp
             if (hours != null && hours >= 2)
                 where_str.append(" and LastModified >= date_sub('" + timestamp + "', interval " + hours + " hour)");
@@ -607,7 +606,8 @@ public class Rib {
 	/**
      @PreDestroy 
      void destory() { 
-     	System.err.println("DESTORY"); 
+     	System.err.println("DESTORY");
      }
      */
 }
+

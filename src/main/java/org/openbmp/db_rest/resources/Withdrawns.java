@@ -115,7 +115,7 @@ public class Withdrawns {
 		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
 		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
 		if(joinWhoisPrefix){
-			query.append("      JOIN gen_whois_route pfx ON (inet6_aton(log.prefix) = pfx.prefix AND log.prefix_len = pfx.prefix_len)\n");
+			query.append("      LEFT JOIN gen_whois_route pfx ON (inet6_aton(log.prefix) = pfx.prefix AND log.prefix_len = pfx.prefix_len)\n");
 		}
 		query.append("      WHERE log.timestamp >= "+startTimestamp +" AND log.timestamp <= " + endTimestamp + "\n");
         if(searchPeer!=null && !searchPeer.isEmpty()) {

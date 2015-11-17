@@ -78,7 +78,7 @@ public class DbUtils {
 		String orderby_st = "";
 		String output = "{}";
 
-		if (where.contains("hour")) {
+		if (where != null && where.contains("hour")) {
 			limit_st = "";
 		}
 

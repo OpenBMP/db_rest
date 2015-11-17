@@ -572,42 +572,42 @@ public class Rib {
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval " + hours + " hour)");
             else
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval 2 hour)");
-
         } else {  // replace default current_timestamp
-
             if (hours != null && hours >= 2)
                 where_str.append(" and LastModified >= date_sub('" + timestamp + "', interval " + hours + " hour)");
             else
                 where_str.append(" and LastModified >= date_sub('" + timestamp + "', interval 2 hour)");
         }
 
-        where_str.append(" and LastModified <= current_timestamp ");
+		where_str.append(" and LastModified <= current_timestamp ");
 
-        if (where != null)
-            where_str.append(" and " + where);
+		if (where != null)
+			where_str.append(" and " + where);
 
+		String tableName = "v_routes_history";
 
-        String tableName = "v_routes_history";
+		switch (type) {
+			case UPDATES:
+				tableName = "v_routes_history";
+				break;
 
-        switch (type) {
-            case UPDATES:
-                tableName = "v_routes_history";
-                break;
+			case WITHDRAWS:
+				tableName = "v_routes_withdraws";
+		}
 
-            case WITHDRAWS:
-                tableName = "v_routes_withdraws";
-        }
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, where_str.toString(), orderby)
+		);
+	}
 
-        return RestResponse.okWithBody(
-                DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, where_str.toString(), orderby));
-    }
-
-    /**
-     * Cleanup
-     */
-    /**
-     @PreDestroy void destory() {
-     System.err.println("DESTORY");
+	/**
+	 * Cleanup
+	 */
+	/**
+     @PreDestroy 
+     void destory() { 
+     	System.err.println("DESTORY");
      }
      */
 }
+

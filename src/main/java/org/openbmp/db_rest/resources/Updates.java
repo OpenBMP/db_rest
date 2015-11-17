@@ -60,6 +60,7 @@ public class Updates {
 	 * @param searchPeer Filter the result with a peer hash
 	 * @param searchPrefix Filter the result with a prefix
 	 * @param groupBy Groups the result by Peer or by prefix and prefix_len
+	 * @param joinWhoisPrefix To join the whois prefix information or not
 	 * @param limit Limit of the data
      * @param startTimestamp The beginning of the desired time period
      * @param endTimestamp The end of the desired time period
@@ -122,7 +123,7 @@ public class Updates {
 		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
 
 		if(joinWhoisPrefix){
-			query.append("      JOIN gen_whois_route pfx ON (inet6_aton(log.prefix) = pfx.prefix AND log.prefix_len = pfx.prefix_len)\n");
+			query.append("      LEFT JOIN gen_whois_route pfx ON (inet6_aton(log.prefix) = pfx.prefix AND log.prefix_len = pfx.prefix_len)\n");
 		}
 
 		query.append("      WHERE log.timestamp >= "+startTimestamp +" AND log.timestamp <= " + endTimestamp + "\n");

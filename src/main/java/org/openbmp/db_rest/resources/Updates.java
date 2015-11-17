@@ -59,6 +59,7 @@ public class Updates {
 	 * @param searchPeer Filter the result with a peer hash
 	 * @param searchPrefix Filter the result with a prefix
 	 * @param groupBy Groups the result by Peer or by prefix and prefix_len
+	 * @param joinWhoisPrefix To join the whois prefix information or not
 	 * @param limit Limit of the data
      * @param startTimestamp The beginning of the desired time period
      * @param endTimestamp The end of the desired time period

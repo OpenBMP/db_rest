@@ -128,8 +128,7 @@ public class Updates {
 			query.append("                     AND (log.prefix_len = \"" + prefix[1] + "\")\n");
 		}
 		query.append("      GROUP BY " + groupBy+"\n");
-		query.append("      ORDER BY Count desc\n");
-		query.append("      LIMIT " + limit + ") l\n");
+		query.append("      ORDER BY Count desc) l\n");
 		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
 		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
 		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
@@ -137,8 +136,9 @@ public class Updates {
 			query.append("      LEFT JOIN gen_whois_route pfx ON (inet6_aton(l.Prefix) = pfx.prefix AND l.PrefixLen = pfx.prefix_len)\n");
 		}
 		query.append("      ORDER BY Count desc\n");
+		query.append("      LIMIT " + limit + "\n");
 
-        System.out.println("QUERY: \n" + query.toString() + "\n");
+		System.out.println("QUERY: \n" + query.toString() + "\n");
 
         return RestResponse.okWithBody(
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));

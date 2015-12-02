@@ -59,13 +59,13 @@ public class Community {
             Pattern p = Pattern.compile("^[0-9]+:[0-9]+$");
             Matcher m = p.matcher(community);
 
-            queryBuilder.append("SELECT peer_hash_id, path_attr_hash_id FROM community_analysis AS ca WHERE ");
+            queryBuilder.append("SELECT peer_hash_id, path_attr_hash_id FROM community_analysis  WHERE ");
             if (community.contains("%")){
-                queryBuilder.append("ca.community LIKE '" + community + "'");
+                queryBuilder.append("community LIKE '" + community + "'");
             } else if (m.matches()) {
-                queryBuilder.append("ca.community = '" + community + "'");
+                queryBuilder.append("community = '" + community + "'");
             } else {
-                queryBuilder.append("ca.community REGEXP '" + community + "'");
+                queryBuilder.append("community REGEXP '" + community + "'");
             }
 
         } else if (p1 != null && isForP2) {
@@ -82,7 +82,7 @@ public class Community {
         // Run query and get map results of query
         long startTime = System.currentTimeMillis();
         Map<String,List<DbColumnDef>> AggRows;
-        AggRows = DbUtils.selectPartitions_DbToMap(mysql_ds, queryBuilder.toString(), limit, 0, 47, null);
+        AggRows = DbUtils.select_DbToMap(mysql_ds, queryBuilder.toString());
 
         if (community != null) {
             Map<String, List<DbColumnDef>> resultMap = new HashMap();
@@ -145,9 +145,8 @@ public class Community {
      * @return a list of prefixes
      */
     @GET
-    @Path("/{community}")
     @Produces("application/json")
-    public Response getPrefixByComm(@PathParam("community") String community,
+    public Response getPrefixByComm(@QueryParam("community") String community,
                                     @QueryParam("limit") Integer limit) {
         return getCommunities(community, null, null, limit);
     }

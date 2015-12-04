@@ -131,7 +131,7 @@ public class Updates {
 		query.append("      ORDER BY Count desc) l\n");
 		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
 		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
-		query.append("      JOIN collectors c ON (c.routers LIKE CONCAT('%',r.ip_address,'%'))\n");
+		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
 		if(joinWhoisPrefix){
 			query.append("      LEFT JOIN gen_whois_route pfx ON (inet6_aton(l.Prefix) = pfx.prefix AND l.PrefixLen = pfx.prefix_len)\n");
 		}

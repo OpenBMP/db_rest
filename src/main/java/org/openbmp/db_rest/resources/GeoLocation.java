@@ -8,21 +8,25 @@
  */
 package org.openbmp.db_rest.resources;
 
-import org.openbmp.db_rest.DbUtils;
-import org.openbmp.db_rest.RestResponse;
-
 import javax.annotation.PostConstruct;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
-import javax.ws.rs.*;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-@Path("/whois/prefix")
-public class WhoisPrefix {
+import org.openbmp.db_rest.RestResponse;
+import org.openbmp.db_rest.DbUtils;
+
+@Path("/geolocation")
+public class GeoLocation {
     @Context
     ServletContext ctx;
     @Context
@@ -52,19 +56,18 @@ public class WhoisPrefix {
     }
 
     @GET
-    @Path("/{prefix}/{prefix_len}")
+    @Path("/{countryCode}/{city}")
     @Produces("application/json")
-    public Response getWhoisPrefix(@PathParam("prefix") String prefix,
-                                @PathParam("prefix_len") Integer prefix_len,
-                                @QueryParam("where") String where) {
+    public Response getRibByLookup(@PathParam("countryCode") String countryCode,
+                                   @PathParam("city") String city) {
 
         StringBuilder query = new StringBuilder();
 
-        query.append("SELECT inet6_ntoa(prefix) as prefix,prefix_len,descr,origin_as,source\n");
-        query.append("    FROM gen_whois_route\n");
-        query.append("    WHERE prefix=inet6_aton('" + prefix + "')\n");
-        query.append("    AND prefix_len=" + prefix_len + "\n");
-        query.append("    GROUP BY prefix,prefix_len\n");
+        // Query first for the prefix/len
+        query.append("    SELECT latitude,longitude FROM geo_location\n");
+        query.append("        WHERE country = '" + countryCode + "'\n");
+        query.append("        AND city = LOWER('" + city + "')\n ");
+        query.append("        LIMIT 1\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -72,21 +75,4 @@ public class WhoisPrefix {
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));
     }
 
-    @GET
-    @Path("/from/{asn}")
-    @Produces("application/json")
-    public Response getPrefixesByOriginAS(@PathParam("asn") String asn) {
-
-        StringBuilder query = new StringBuilder();
-
-        query.append("SELECT *\n");
-        query.append("    FROM v_routes\n");
-        query.append("    WHERE Origin_AS = "+asn+"\n");
-        query.append("    GROUP BY Prefix,PrefixLen\n");
-
-        System.out.println("QUERY: \n" + query.toString() + "\n");
-
-        return RestResponse.okWithBody(
-                DbUtils.select_DbToJson(mysql_ds, query.toString()));
-    }
 }

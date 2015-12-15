@@ -34,7 +34,7 @@ public class GeoIp {
 
 	/**
 	 * Initialize the class Sets the data source
-	 * 
+	 *
 	 * @throws
 	 */
 	@PostConstruct
@@ -58,28 +58,91 @@ public class GeoIp {
 	@Produces("application/json")
 	public Response getRibByLookup(@PathParam("IP") String ip,
 						   @QueryParam("where") String where) {
-		
+
 		StringBuilder query = new StringBuilder();
-		
+
 		String addrType = "ipv4";
 		if (ip.indexOf(':') >= 0)
 			addrType = "ipv6";
-		
+
 		// Query first for the prefix/len
 		query.append("SELECT * FROM v_geo_ip\n");
 		query.append("        WHERE ip_end_bin >= inet6_aton('" + ip + "')\n");
 		query.append("               and ip_start_bin <= inet6_aton('" + ip + "') and addr_type = '" + addrType + "'\n ");
-		
+
 		if (where != null)
         	query.append(" AND " + where);
-		
+
 		query.append("        ORDER BY ip_end_bin limit 1\n ");
-        
-        
+
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
+
+	@GET
+    @Path("/get/{page}/{limit}")
+    @Produces("application/json")
+    public Response getGeoIPList(@PathParam("page") int page,
+                                 @PathParam("limit") int limit,
+                                 @QueryParam("sort") String sort,
+                                 @QueryParam("sortDirection") String sortDirection) {
+
+        StringBuilder query = new StringBuilder();
+
+        // Query first for the prefix/len
+        query.append("SELECT * FROM v_geo_ip\n");
+        if (sort != null && sortDirection != null)
+            query.append("     ORDER BY " + sort + " " + sortDirection + "\n");
+        query.append("     LIMIT " + (page - 1) * 1000 + "," + limit + "   \n ");
+
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
+    @Path("/getcount")
+    @Produces("application/json")
+    public Response getGeoIPCount() {
+
+        StringBuilder query = new StringBuilder();
+
+        // Query first for the prefix/len
+        query.append("SELECT COUNT(*) as COUNT FROM v_geo_ip\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
+    @Path("/update/{ip_start}/{col}/{value}")
+    @Produces("application/json")
+    public Response updateGeoIP(@PathParam("ip_start") String ip_start,
+                                 @PathParam("col") String column,
+                                 @PathParam("value") String value) {
+
+        StringBuilder query = new StringBuilder();
+
+        boolean valueIsString = true;
+
+        if(column=="latitude"||column=="longitude")
+            valueIsString=false;
+
+        query.append("UPDATE geo_ip \n");
+        query.append("    SET " + column + "=" + (valueIsString ? ("'" + value + "'") : value) + "\n");
+        query.append("    WHERE ip_start="+"inet6_aton('"+ip_start+"')\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+    }
 
 }

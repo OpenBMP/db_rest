@@ -75,4 +75,68 @@ public class GeoLocation {
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));
     }
 
+    @GET
+    @Path("/get/{page}/{limit}")
+    @Produces("application/json")
+    public Response getGeoIPList(@PathParam("page") int page,
+                                 @PathParam("limit") int limit,
+                                 @QueryParam("sort") String sort,
+                                 @QueryParam("sortDirection") String sortDirection) {
+
+        StringBuilder query = new StringBuilder();
+
+        // Query first for the prefix/len
+        query.append("SELECT * FROM geo_location\n");
+        if (sort != null && sortDirection != null)
+            query.append("     ORDER BY " + sort + " " + sortDirection + "\n");
+        query.append("     LIMIT " + (page - 1) * 1000 + "," + limit + "   \n ");
+
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
+    @Path("/getcount")
+    @Produces("application/json")
+    public Response getGeoIPCount() {
+
+        StringBuilder query = new StringBuilder();
+
+        // Query first for the prefix/len
+        query.append("SELECT COUNT(*) as COUNT FROM geo_location\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
+    @Path("/update/{country}/{city}/{col}/{value}")
+    @Produces("application/json")
+    public Response updateGeoIP(@PathParam("country") String country,
+                                @PathParam("city") String city,
+                                @PathParam("col") String column,
+                                @PathParam("value") String value) {
+
+        StringBuilder query = new StringBuilder();
+
+        boolean valueIsString = true;
+
+        if(column=="latitude"||column=="longitude")
+            valueIsString=false;
+
+        query.append("UPDATE geo_location \n");
+        query.append("    SET " + column + "=" + (valueIsString ? ("'" + value + "'") : value) + "\n");
+        query.append("    WHERE country='" + country + "' AND city='" + city + "'\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+    }
+
 }

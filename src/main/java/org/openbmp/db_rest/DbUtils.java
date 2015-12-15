@@ -183,6 +183,37 @@ public class DbUtils {
 	
 		return output;
 	}
+
+	static public int update_Db(DataSource ds, String query) {
+
+		//
+		// Run the query
+		//
+		Connection conn = null;
+		Statement stmt = null;
+		int updated = 0;
+
+		try{
+			conn = ds.getConnection();
+			stmt = conn.createStatement();
+			updated = stmt.executeUpdate(query);
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+
+		} finally {
+			try {
+				if (stmt != null)
+					stmt.close();
+				if (conn != null)
+					conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return updated;
+	}
 	
 	/**
 	 * Return Select query in MAP format

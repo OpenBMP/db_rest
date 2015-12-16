@@ -13,11 +13,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -121,6 +117,36 @@ public class GeoIp {
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));
     }
 
+    @POST
+    @Path("/insert")
+    @Produces("application/json")
+    public Response insertGeoIP(@QueryParam("ip_start") String ip_start,
+                                @QueryParam("ip_end") String ip_end,
+                                @QueryParam("country") String country,
+                                @QueryParam("stateprov") String stateprov,
+                                @QueryParam("city") String city,
+                                @QueryParam("latitude") String latitude,
+                                @QueryParam("longitude") String longitude,
+                                @QueryParam("timezone_name") String timezone_name,
+                                @QueryParam("timezone_offset") String timezone_offset,
+                                @QueryParam("isp_name") String isp_name) {
+
+        StringBuilder query = new StringBuilder();
+
+        String addrType = "ipv4";
+        if (ip_start.indexOf(':') >= 0)
+            addrType = "ipv6";
+
+        query.append("INSERT INTO geo_ip \n");
+        query.append("    (ip_start,ip_end,country,stateprov,city,latitude,longitude,addr_type,timezone_name,timezone_offset,isp_name)\n");
+        query.append("    VALUES (inet6_aton('" + ip_start + "'),inet6_aton('" + ip_end + "'),'" + country + "','" + stateprov + "','" + city + "'," + latitude + "," + longitude + ",'" + addrType + "','" + timezone_name + "'," + timezone_offset + ",'" + isp_name + "')\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+    }
+
     @GET
     @Path("/update/{ip_start}/{col}/{value}")
     @Produces("application/json")
@@ -143,6 +169,23 @@ public class GeoIp {
 
         return RestResponse.okWithBody(
                 Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+    }
+
+    @GET
+    @Path("/delete/{ip_start}")
+    @Produces("application/json")
+    public Response deleteGeoIP(@PathParam("ip_start") String ip_start){
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("DELETE FROM geo_ip \n");
+        query.append("    WHERE ip_start="+"inet6_aton('"+ip_start+"')\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+
     }
 
 }

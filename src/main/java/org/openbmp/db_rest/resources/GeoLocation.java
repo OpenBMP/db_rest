@@ -13,11 +13,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -58,7 +54,7 @@ public class GeoLocation {
     @GET
     @Path("/{countryCode}/{city}")
     @Produces("application/json")
-    public Response getRibByLookup(@PathParam("countryCode") String countryCode,
+    public Response getCoordinates(@PathParam("countryCode") String countryCode,
                                    @PathParam("city") String city) {
 
         StringBuilder query = new StringBuilder();
@@ -78,10 +74,10 @@ public class GeoLocation {
     @GET
     @Path("/get/{page}/{limit}")
     @Produces("application/json")
-    public Response getGeoIPList(@PathParam("page") int page,
-                                 @PathParam("limit") int limit,
-                                 @QueryParam("sort") String sort,
-                                 @QueryParam("sortDirection") String sortDirection) {
+    public Response getGeoLocationList(@PathParam("page") int page,
+                                       @PathParam("limit") int limit,
+                                       @QueryParam("sort") String sort,
+                                       @QueryParam("sortDirection") String sortDirection) {
 
         StringBuilder query = new StringBuilder();
 
@@ -101,7 +97,7 @@ public class GeoLocation {
     @GET
     @Path("/getcount")
     @Produces("application/json")
-    public Response getGeoIPCount() {
+    public Response getGeoLocationCount() {
 
         StringBuilder query = new StringBuilder();
 
@@ -114,20 +110,40 @@ public class GeoLocation {
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));
     }
 
+    @POST
+    @Path("/insert")
+    @Produces("application/json")
+    public Response insertGeoIP(@QueryParam("country") String country,
+                                @QueryParam("city") String city,
+                                @QueryParam("latitude") String latitude,
+                                @QueryParam("longitude") String longitude) {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("INSERT INTO geo_location \n");
+        query.append("    (country,city,latitude,longitude)\n");
+        query.append("    VALUES ('" + country + "',LOWER('" + city + "')," + latitude + "," + longitude +")\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+    }
+
     @GET
     @Path("/update/{country}/{city}/{col}/{value}")
     @Produces("application/json")
-    public Response updateGeoIP(@PathParam("country") String country,
-                                @PathParam("city") String city,
-                                @PathParam("col") String column,
-                                @PathParam("value") String value) {
+    public Response updateGeoLocation(@PathParam("country") String country,
+                                      @PathParam("city") String city,
+                                      @PathParam("col") String column,
+                                      @PathParam("value") String value) {
 
         StringBuilder query = new StringBuilder();
 
         boolean valueIsString = true;
 
-        if(column=="latitude"||column=="longitude")
-            valueIsString=false;
+        if (column == "latitude" || column == "longitude")
+            valueIsString = false;
 
         query.append("UPDATE geo_location \n");
         query.append("    SET " + column + "=" + (valueIsString ? ("'" + value + "'") : value) + "\n");
@@ -137,6 +153,24 @@ public class GeoLocation {
 
         return RestResponse.okWithBody(
                 Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+    }
+
+    @GET
+    @Path("/delete/{country}/{city}")
+    @Produces("application/json")
+    public Response deleteGeoLocation(@PathParam("country") String country,
+                                      @PathParam("city") String city) {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("DELETE FROM geo_location \n");
+        query.append("    WHERE country='" + country + "' AND city='" + city + "'\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+
     }
 
 }

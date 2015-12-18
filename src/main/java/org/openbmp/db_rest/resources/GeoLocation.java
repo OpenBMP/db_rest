@@ -82,6 +82,7 @@ public class GeoLocation {
     @Produces("application/json")
     public Response getGeoLocationList(@PathParam("page") int page,
                                        @PathParam("limit") int limit,
+                                       @QueryParam("where") String whereClause,
                                        @QueryParam("sort") String sort,
                                        @QueryParam("sortDirection") String sortDirection) {
 
@@ -89,6 +90,8 @@ public class GeoLocation {
 
         // Query first for the prefix/len
         query.append("SELECT * FROM geo_location\n");
+        if (whereClause != null && !whereClause.isEmpty())
+            query.append(whereClause + "\n");
         if (sort != null && sortDirection != null)
             query.append("     ORDER BY " + sort + " " + sortDirection + "\n");
         query.append("     LIMIT " + (page - 1) * 1000 + "," + limit + "   \n ");
@@ -103,12 +106,14 @@ public class GeoLocation {
     @GET
     @Path("/getcount")
     @Produces("application/json")
-    public Response getGeoLocationCount() {
+    public Response getGeoLocationCount(@QueryParam("where") String whereClause) {
 
         StringBuilder query = new StringBuilder();
 
         // Query first for the prefix/len
         query.append("SELECT COUNT(*) as COUNT FROM geo_location\n");
+        if (whereClause != null && !whereClause.isEmpty())
+            query.append(whereClause + "\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -285,7 +290,7 @@ public class GeoLocation {
                     "Exception:" + e.getMessage());
         }
 
-        return RestResponse.okWithBody("Success! Rows inserted: "+
+        return RestResponse.okWithBody("Success! Rows inserted: " +
                 Integer.toString(affectedRows));
     }
 

@@ -91,6 +91,7 @@ public class GeoIp {
     @Produces("application/json")
     public Response getGeoIPList(@PathParam("page") int page,
                                  @PathParam("limit") int limit,
+                                 @QueryParam("where") String whereClause,
                                  @QueryParam("sort") String sort,
                                  @QueryParam("sortDirection") String sortDirection) {
 
@@ -98,6 +99,8 @@ public class GeoIp {
 
         // Query first for the prefix/len
         query.append("SELECT * FROM v_geo_ip\n");
+        if (whereClause != null && !whereClause.isEmpty())
+            query.append(whereClause + "\n");
         if (sort != null && sortDirection != null)
             query.append("     ORDER BY " + sort + " " + sortDirection + "\n");
         query.append("     LIMIT " + (page - 1) * 1000 + "," + limit + "   \n ");
@@ -112,12 +115,14 @@ public class GeoIp {
     @GET
     @Path("/getcount")
     @Produces("application/json")
-    public Response getGeoIPCount() {
+    public Response getGeoIPCount(@QueryParam("where") String whereClause) {
 
         StringBuilder query = new StringBuilder();
 
         // Query first for the prefix/len
         query.append("SELECT COUNT(*) as COUNT FROM v_geo_ip\n");
+        if (whereClause != null && !whereClause.isEmpty())
+            query.append(whereClause + "\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -251,12 +256,13 @@ public class GeoIp {
         ArrayList<String> typeArray = new ArrayList<String>();
 
         String statement = "DELETE FROM geo_ip";
-        try {
-            System.out.println("Deleted: " + DbUtils.update_Db(mysql_ds, statement.toString()));
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return RestResponse.okWithBody(e.getMessage());
-        }
+//        try {
+//            System.out.println("Deleted: " + DbUtils.update_Db(mysql_ds, statement.toString()));
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//            return RestResponse.okWithBody(e.getMessage());
+//        }
+
         String[] tempArray = indexes.split(",");
 
         for (int i = 0; i < tempArray.length; i++) {
@@ -268,7 +274,9 @@ public class GeoIp {
             }
         }
 
-        String columns = fieldArray.toString().substring(1, fieldArray.toString().length() - 1);
+        String columns = fieldArray.toString().substring(1, fieldArray.toString().length() - 1)+",addr_type";
+
+        String addrType = "ipv4";
 
         String line;
         statement = "INSERT IGNORE INTO geo_ip (" + columns + ") VALUES ";
@@ -287,12 +295,15 @@ public class GeoIp {
                         statement += "\"" + values[indexArray.get(i)].replace('\"', '\'') + "\",";
                     else if(fieldArray.get(i).startsWith("ip")){
                         statement += "inet6_aton(\"" + values[indexArray.get(i)] + "\"),";
+                        if (values[indexArray.get(i)].indexOf(':') >= 0)
+                            addrType = "ipv6";
+                        else
+                            addrType = "ipv4";
                     }
                     else
                         statement += values[indexArray.get(i)] + ",";
                 }
-                statement = statement.substring(0, statement.length() - 1);
-                statement += "),";
+                statement += "\""+addrType+"\"),";
                 pointer++;
             }
 

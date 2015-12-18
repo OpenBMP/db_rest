@@ -184,7 +184,7 @@ public class DbUtils {
 		return output;
 	}
 
-	static public int update_Db(DataSource ds, String query) {
+	static public int update_Db(DataSource ds, String query) throws SQLException {
 
 		//
 		// Run the query
@@ -199,8 +199,7 @@ public class DbUtils {
 			updated = stmt.executeUpdate(query);
 
 		} catch (SQLException e) {
-			e.printStackTrace();
-
+			throw e;
 		} finally {
 			try {
 				if (stmt != null)

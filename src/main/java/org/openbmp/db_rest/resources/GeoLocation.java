@@ -18,8 +18,14 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
+
+import java.io.*;
+import java.lang.reflect.Array;
+import java.sql.SQLException;
+import java.util.ArrayList;
 
 @Path("/geolocation")
 public class GeoLocation {
@@ -112,7 +118,7 @@ public class GeoLocation {
 
     @POST
     @Path("/insert")
-    @Produces("application/json")
+    @Produces("text/plain")
     public Response insertGeoIP(@QueryParam("country") String country,
                                 @QueryParam("city") String city,
                                 @QueryParam("latitude") String latitude,
@@ -122,17 +128,22 @@ public class GeoLocation {
 
         query.append("INSERT INTO geo_location \n");
         query.append("    (country,city,latitude,longitude)\n");
-        query.append("    VALUES ('" + country + "',LOWER('" + city + "')," + latitude + "," + longitude +")\n");
+        query.append("    VALUES ('" + country + "',LOWER('" + city + "')," + latitude + "," + longitude + ")\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
-        return RestResponse.okWithBody(
-                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+        try {
+            return RestResponse.okWithBody(
+                    Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return RestResponse.okWithBody(e.getMessage());
+        }
     }
 
     @GET
     @Path("/update/{country}/{city}/{col}/{value}")
-    @Produces("application/json")
+    @Produces("text/plain")
     public Response updateGeoLocation(@PathParam("country") String country,
                                       @PathParam("city") String city,
                                       @PathParam("col") String column,
@@ -151,13 +162,19 @@ public class GeoLocation {
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
-        return RestResponse.okWithBody(
-                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+        try {
+            return RestResponse.okWithBody(
+                    Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return RestResponse.okWithBody(e.getMessage());
+        }
+
     }
 
     @GET
     @Path("/delete/{country}/{city}")
-    @Produces("application/json")
+    @Produces("text/plain")
     public Response deleteGeoLocation(@PathParam("country") String country,
                                       @PathParam("city") String city) {
 
@@ -168,9 +185,108 @@ public class GeoLocation {
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
-        return RestResponse.okWithBody(
-                Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+        try {
+            return RestResponse.okWithBody(
+                    Integer.toString(DbUtils.update_Db(mysql_ds, query.toString())));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return RestResponse.okWithBody(e.getMessage());
+        }
 
+    }
+
+    @GET
+    @Path("/describe")
+    @Produces("application/json")
+    public Response describe() {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("DESCRIBE geo_location");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+
+    }
+
+    @POST
+    @Path("/import")
+    @Consumes("multipart/form-data")
+    @Produces("text/plain")
+    public Response fromFile(@FormDataParam("file") InputStream file,
+                             @FormDataParam("indexes") String indexes,
+                             @FormDataParam("fields") String fields,
+                             @FormDataParam("types") String types,
+                             @DefaultValue(",") @FormDataParam("delimiter") String delimiter) throws IOException {
+
+        int INSERT_THRESHOLD = 1000;
+        int pointer = 1, affectedRows = 0;
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(file));
+
+        ArrayList<Integer> indexArray = new ArrayList<Integer>();
+
+        ArrayList<String> fieldArray = new ArrayList<String>();
+
+        ArrayList<String> typeArray = new ArrayList<String>();
+
+        String statement = "DELETE FROM geo_location";
+        try {
+            System.out.println("Deleted: " + DbUtils.update_Db(mysql_ds, statement.toString()));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return RestResponse.okWithBody(e.getMessage());
+        }
+        String[] tempArray = indexes.split(",");
+
+        for (int i = 0; i < tempArray.length; i++) {
+            int value = Integer.valueOf(tempArray[i]);
+            if (value > -1) {
+                indexArray.add(value);
+                fieldArray.add(fields.split(",")[i]);
+                typeArray.add(types.split(",")[i]);
+            }
+        }
+
+        String columns = fieldArray.toString().substring(1, fieldArray.toString().length() - 1);
+
+        String line;
+        statement = "INSERT IGNORE INTO geo_location (" + columns + ") VALUES ";
+        try {
+            while ((line = reader.readLine()) != null) {
+                if (pointer % INSERT_THRESHOLD == 0) {
+                    statement = statement.substring(0, statement.length() - 1);
+                    System.out.println("QUERY: \n" + statement.toString() + "\n");
+                    affectedRows += DbUtils.update_Db(mysql_ds, statement.toString());
+                    statement = "INSERT IGNORE INTO geo_location (" + columns + ") VALUES ";
+                }
+                statement += "(";
+                String[] values = line.split(delimiter);
+                for (int i = 0; i < indexArray.size(); i++) {
+                    if (typeArray.get(i).contains("char"))
+                        statement += "\"" + values[indexArray.get(i)].replace('\"', '\'') + "\",";
+                    else
+                        statement += values[indexArray.get(i)] + ",";
+                }
+                statement = statement.substring(0, statement.length() - 1);
+                statement += "),";
+                pointer++;
+            }
+
+            if (pointer % INSERT_THRESHOLD != 0) {
+                statement = statement.substring(0, statement.length() - 1);
+                System.out.println("QUERY: \n" + statement.toString() + "\n");
+                affectedRows += DbUtils.update_Db(mysql_ds, statement.toString());
+            }
+        } catch (SQLException e) {
+            return RestResponse.okWithBody(
+                    "Exception:" + e.getMessage());
+        }
+
+        return RestResponse.okWithBody("Success! Rows inserted: "+
+                Integer.toString(affectedRows));
     }
 
 }

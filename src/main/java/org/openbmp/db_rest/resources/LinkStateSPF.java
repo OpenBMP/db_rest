@@ -70,7 +70,7 @@ public class LinkStateSPF {
 						     @QueryParam("orderby") String orderby) {
 		
 		StringBuilder query = new StringBuilder();
-		String tableName = "igp_ospf_" + routerId.replace('.',  '_');
+		String tableName = "igp_ospf_" + routerId.replaceAll("[.:]",  "_");
 		long startTime = System.currentTimeMillis();
 		
 		// first call stored procedure to generate the IGP/SPF table.
@@ -166,7 +166,9 @@ public class LinkStateSPF {
 						     @QueryParam("orderby") String orderby) {
 		
 		StringBuilder query = new StringBuilder();
-		String tableName = "igp_isis_" + routerId.replace('.',  '_');
+		String tableName = "igp_isis_" +  routerId.replaceAll("[.:]",  "_");
+
+		System.out.println("table name " + tableName);
 		long startTime = System.currentTimeMillis();
 		
 		// first call stored procedure to generate the IGP/SPF table.

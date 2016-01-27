@@ -29,6 +29,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
 
@@ -157,18 +158,18 @@ public class LinkStateSPF {
 	}
 	
 	@GET
-	@Path("/peer/{peerHashId}/isis/{routerId}")
+	@Path("/peer/{peerHashId}/isis/{routerId}/{mt_id}")
 	@Produces("application/json")
 	public Response getLsIsisIGP(@PathParam("peerHashId") String peerHashId,
 							 @PathParam("routerId") String routerId,
+							 @PathParam("mt_id") Long mt_id,
 			                 @QueryParam("limit") Integer limit,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
 		
 		StringBuilder query = new StringBuilder();
-		String tableName = "igp_isis_" +  routerId.replaceAll("[.:]",  "_");
+		String tableName = "igp_isis_" + mt_id + '_' + routerId.replaceAll("[.:]",  "_");
 
-		System.out.println("table name " + tableName);
 		long startTime = System.currentTimeMillis();
 		
 		// first call stored procedure to generate the IGP/SPF table.
@@ -176,15 +177,17 @@ public class LinkStateSPF {
 		CallableStatement cs = null;
 		try{
 			conn = mysql_ds.getConnection();
-			cs = conn.prepareCall("{call ls_isis_spf(?, ?, ?, ?)}");
+			cs = conn.prepareCall("{call ls_isis_spf(?, ?, ?, ?, ?)}");
 			cs.setString(1, peerHashId);
 			cs.setString(2, routerId);
-			cs.setInt(3, 15);
-			cs.registerOutParameter(4, Types.INTEGER);
+			cs.setLong(3, mt_id);
+			cs.setInt(4, 15);
+			cs.registerOutParameter(5, Types.INTEGER);
 			
-			cs.execute();
-			
-			System.out.println(" SPF iterations = " + cs.getInt(3));
+			boolean rval = cs.execute();
+            System.out.println("rval = " + rval);
+
+            System.out.println(" SPF iterations = " + cs.getInt(3));
             
 			String limit_str = "";
 			if (limit != null && limit >= 1 && limit <= 500000)
@@ -208,7 +211,7 @@ public class LinkStateSPF {
 			query.append("                nei.router_id as nei_router_id,\n");
 			query.append("                igp_isis.path_router_ids,igp_isis.path_hash_ids,\n");
 			query.append("                l.neighbor_addr as neighbor_addr,\n");
-			query.append("                igp_isis.peer_hash_id\n");
+			query.append("                igp_isis.peer_hash_id,igp_isis.mt_id\n");
 			query.append("    FROM " + tableName + " igp_isis JOIN ls_nodes n ON (igp_isis.src_node_hash_id = n.hash_id)\n");
 			query.append("            JOIN ls_nodes nei ON (igp_isis.nh_node_hash_id = nei.hash_id and nei.peer_hash_id = '" + peerHashId +"')\n");
 			query.append("            LEFT JOIN ls_links l ON (igp_isis.nh_node_hash_id = l.remote_node_hash_id and\n");

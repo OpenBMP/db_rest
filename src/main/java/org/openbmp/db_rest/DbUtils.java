@@ -83,9 +83,9 @@ public class DbUtils {
 		}
 
 		// Set the limit for the query 
-		if (limit != null && limit < 40000)
+		if (limit != null && limit > 0 && limit < 100000)
 			limit_st = " limit " + limit;
-		
+
 		else if (limit != null && limit == 0)
 			limit_st = "";
 		

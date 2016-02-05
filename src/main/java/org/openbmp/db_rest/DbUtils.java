@@ -83,8 +83,11 @@ public class DbUtils {
 		}
 
 		// Set the limit for the query 
-		if (limit != null && limit < 40000)
+		if (limit != null && limit > 0 && limit < 100000)
 			limit_st = " limit " + limit;
+
+		else if (limit != null && limit == 0)
+			limit_st = "";
 		
 		if (where != null)
 			where_st = " WHERE " + where;
@@ -667,7 +670,7 @@ public class DbUtils {
 							break;
 							
 						case Types.INTEGER:
-							jgen.writeNumber(db_results.getInt(i));
+							jgen.writeNumber(db_results.getBigDecimal(i));
 							break;
 							
 						case Types.BOOLEAN: 

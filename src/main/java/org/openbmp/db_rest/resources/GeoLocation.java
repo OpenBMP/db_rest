@@ -94,7 +94,7 @@ public class GeoLocation {
             query.append(whereClause + "\n");
         if (sort != null && sortDirection != null)
             query.append("     ORDER BY " + sort + " " + sortDirection + "\n");
-        query.append("     LIMIT " + (page - 1) * 1000 + "," + limit + "   \n ");
+        query.append("     LIMIT " + (page - 1) * limit + "," + limit + "   \n ");
 
 
         System.out.println("QUERY: \n" + query.toString() + "\n");

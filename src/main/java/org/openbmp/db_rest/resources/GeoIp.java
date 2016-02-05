@@ -103,7 +103,7 @@ public class GeoIp {
             query.append(whereClause + "\n");
         if (sort != null && sortDirection != null)
             query.append("     ORDER BY " + sort + " " + sortDirection + "\n");
-        query.append("     LIMIT " + (page - 1) * 1000 + "," + limit + "   \n ");
+        query.append("     LIMIT " + (page - 1) * limit + "," + limit + "   \n ");
 
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
@@ -255,7 +255,8 @@ public class GeoIp {
 
         ArrayList<String> typeArray = new ArrayList<String>();
 
-        String statement = "DELETE FROM geo_ip";
+        String statement;
+//        = "DELETE FROM geo_ip";
 //        try {
 //            System.out.println("Deleted: " + DbUtils.update_Db(mysql_ds, statement.toString()));
 //        } catch (SQLException e) {

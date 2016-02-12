@@ -123,7 +123,31 @@ public class LinkState {
 				DbUtils.select_DbToJson(mysql_ds, query));
 	}
 
-	@GET
+    @GET
+    @Path("/nodes/peer/{peerHashId}/{mt_id}")
+    @Produces("application/json")
+    public Response getLsNodesByPeer(@PathParam("peerHashId") String peerHashId,
+                                     @PathParam("mt_id") Long mt_id,
+                                     @QueryParam("limit") Integer limit,
+                                     @QueryParam("where") String where,
+                                     @QueryParam("orderby") String orderby,
+                                     @QueryParam("withGeo") Boolean withGeo) {
+
+        if (where != null && peerHashId != null) {
+            where = "peer_hash_id = '" + peerHashId + "' AND mt_id = " + mt_id + " AND " + where;
+        }
+        else if (peerHashId != null)
+            where = "peer_hash_id = '" + peerHashId + "' AND mt_id = " + mt_id;
+
+
+        String query = buildQuery_v_ls_nodes(where, orderby, limit, withGeo);
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query));
+    }
+
+    /*** not used
+    @GET
 	@Path("/nodes/peer/{peerHashId}/{nodeHashId}")
 	@Produces("application/json")
 	public Response getLsNodesByPeerAndNode(@PathParam("peerHashId") String peerHashId,
@@ -148,7 +172,7 @@ public class LinkState {
         return RestResponse.okWithBody(
                 DbUtils.select_DbToJson(mysql_ds, query));
 	}
-
+***/
 
 	@GET
 	@Path("/links")
@@ -180,7 +204,26 @@ public class LinkState {
 					DbUtils.selectStar_DbToJson(mysql_ds, "v_ls_links", limit, where, orderby));
 	}
 
-	
+	@GET
+	@Path("/links/peer/{peerHashId}/{mt_id}")
+	@Produces("application/json")
+	public Response getLsLinksByPeer(@PathParam("peerHashId") String peerHashId,
+									 @PathParam("mt_id") Long mt_id,
+									 @QueryParam("limit") Integer limit,
+									 @QueryParam("where") String where,
+									 @QueryParam("orderby") String orderby) {
+
+		if (where != null && peerHashId != null) {
+			where = "peer_hash_id = '" + peerHashId + " AND mt_id = " + mt_id + "' AND " + where;
+		}
+		else if (peerHashId != null)
+			where = "peer_hash_id = '" + peerHashId + "' AND mt_id = " + mt_id;
+
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_ls_links", limit, where, orderby));
+	}
+
+
 	@GET
 	@Path("/prefixes")
 	@Produces("application/json")
@@ -211,6 +254,25 @@ public class LinkState {
 					DbUtils.selectStar_DbToJson(mysql_ds, "v_ls_prefixes", limit, where, orderby));
 	}
 
+	@GET
+	@Path("/prefixes/peer/{peerHashId}/{mt_id}")
+	@Produces("application/json")
+	public Response getLsPrefixesByPeer(@PathParam("peerHashId") String peerHashId,
+										@PathParam("mt_id") Long mt_id,
+										@QueryParam("limit") Integer limit,
+										@QueryParam("where") String where,
+										@QueryParam("orderby") String orderby) {
+
+		if (where != null && peerHashId != null) {
+			where = "peer_hash_id = '" + peerHashId + "' AND " + " AND mt_id = " + mt_id + " AND " + where;
+		}
+		else if (peerHashId != null)
+			where = "peer_hash_id = '" + peerHashId + "'" + " AND mt_id = " + mt_id;
+
+		return RestResponse.okWithBody(
+				DbUtils.selectStar_DbToJson(mysql_ds, "v_ls_prefixes", limit, where, orderby));
+	}
+
     @GET
     @Path("/peers")
     @Produces("application/json")
@@ -223,16 +285,16 @@ public class LinkState {
         StringBuilder query = new StringBuilder();
 
         if (withGeo == null) {
-            query.append("SELECT RouterName,RouterIP,PeerName,PeerIP,protocol,peer_hash_id,router_hash_id\n");
-            query.append("     FROM v_ls_nodes ls_peers\n");
-            query.append("     GROUP BY RouterIP,PeerIP,protocol\n");
+            query.append("SELECT RouterName,RouterIP,PeerName,PeerIP,ls_peers.protocol,links.peer_hash_id,ls_peers.router_hash_id,links.mt_id\n");
+            query.append("     FROM ls_links links JOIN v_ls_nodes ls_peers ON (links.peer_hash_id = ls_peers.peer_hash_id)\n");
+            query.append("     GROUP BY RouterIP,PeerIP,ls_peers.protocol,mt_id\n");
 
 
         } else {
-            query.append("SELECT RouterName,RouterIP,PeerName,PeerIP,protocol,peer_hash_id,router_hash_id,v_geo_ip.* \n");
-            query.append("     FROM v_ls_nodes ls_peers\n");
+            query.append("SELECT RouterName,RouterIP,PeerName,PeerIP,ls_peers.protocol,links.peer_hash_id,ls_peers.router_hash_id,links.mt_id,v_geo_ip.* \n");
+            query.append("     FROM ls_links links JOIN v_ls_nodes ls_peers ON (links.peer_hash_id = ls_peers.peer_hash_id)\n");
             query.append("           LEFT JOIN v_geo_ip ON (v_geo_ip.ip_start_bin = inet6_aton(ls_peers.PeerIP))\n");
-            query.append("     GROUP BY RouterIP,PeerIP,protocol\n");
+            query.append("     GROUP BY RouterIP,PeerIP,ls_peers.protocol,mt_id\n");
         }
 
         if (where != null) {

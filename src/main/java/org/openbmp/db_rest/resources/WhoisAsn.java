@@ -148,5 +148,24 @@ public class WhoisAsn {
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-		
+
+	@GET
+	@Path("/all")
+	@Produces("application/json")
+	public Response getUpstream() {
+
+		StringBuilder query = new StringBuilder();
+
+		query.append("SELECT ASCollection.asn,upstreams,downstreams,as_name,city,state_prov,country,org_name\n");
+		query.append("    FROM (SELECT asn, GROUP_CONCAT(DISTINCT asn_left) as upstreams, GROUP_CONCAT(DISTINCT asn_right) as downstreams \n");
+		query.append("         FROM as_path_analysis GROUP BY asn) ASCollection\n");
+		query.append("    LEFT JOIN gen_whois_asn w ON (ASCollection.asn = w.asn)\n");
+		query.append("    ORDER BY ASCollection.asn\n");
+
+		System.out.println("QUERY: \n" + query.toString() + "\n");
+
+		return RestResponse.okWithBody(
+				DbUtils.select_DbToJson(mysql_ds, query.toString()));
+	}
+
 }

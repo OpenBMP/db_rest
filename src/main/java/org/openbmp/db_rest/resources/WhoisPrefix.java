@@ -54,7 +54,7 @@ public class WhoisPrefix {
     @GET
     @Path("/{prefix}/{prefix_len}")
     @Produces("application/json")
-    public Response getWhoisAsn(@PathParam("prefix") String prefix,
+    public Response getWhoisPrefix(@PathParam("prefix") String prefix,
                                 @PathParam("prefix_len") Integer prefix_len,
                                 @QueryParam("where") String where) {
 
@@ -72,4 +72,21 @@ public class WhoisPrefix {
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));
     }
 
+    @GET
+    @Path("/from/{asn}")
+    @Produces("application/json")
+    public Response getPrefixesByOriginAS(@PathParam("asn") String asn) {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("SELECT *\n");
+        query.append("    FROM v_routes\n");
+        query.append("    WHERE Origin_AS = "+asn+"\n");
+        query.append("    GROUP BY Prefix,PrefixLen\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
 }

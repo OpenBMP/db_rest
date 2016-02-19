@@ -67,7 +67,7 @@ public class GeoLocation {
 
         // Query first for the prefix/len
         query.append("    SELECT latitude,longitude FROM geo_location\n");
-        query.append("        WHERE country = '" + countryCode + "'\n");
+        query.append("        WHERE country_code = '" + countryCode + "'\n");
         query.append("        AND city = LOWER('" + city + "')\n ");
         query.append("        LIMIT 1\n");
 
@@ -124,7 +124,7 @@ public class GeoLocation {
     @POST
     @Path("/insert")
     @Produces("text/plain")
-    public Response insertGeoIP(@QueryParam("country") String country,
+    public Response insertGeoIP(@QueryParam("country_code") String country_code,
                                 @QueryParam("city") String city,
                                 @QueryParam("latitude") String latitude,
                                 @QueryParam("longitude") String longitude) {
@@ -132,8 +132,8 @@ public class GeoLocation {
         StringBuilder query = new StringBuilder();
 
         query.append("INSERT INTO geo_location \n");
-        query.append("    (country,city,latitude,longitude)\n");
-        query.append("    VALUES ('" + country + "',LOWER('" + city + "')," + latitude + "," + longitude + ")\n");
+        query.append("    (country_code,city,latitude,longitude)\n");
+        query.append("    VALUES ('" + country_code + "',LOWER('" + city + "')," + latitude + "," + longitude + ")\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -147,9 +147,9 @@ public class GeoLocation {
     }
 
     @GET
-    @Path("/update/{country}/{city}/{col}/{value}")
+    @Path("/update/{country_code}/{city}/{col}/{value}")
     @Produces("text/plain")
-    public Response updateGeoLocation(@PathParam("country") String country,
+    public Response updateGeoLocation(@PathParam("country_code") String country_code,
                                       @PathParam("city") String city,
                                       @PathParam("col") String column,
                                       @PathParam("value") String value) {
@@ -163,7 +163,7 @@ public class GeoLocation {
 
         query.append("UPDATE geo_location \n");
         query.append("    SET " + column + "=" + (valueIsString ? ("'" + value + "'") : value) + "\n");
-        query.append("    WHERE country='" + country + "' AND city='" + city + "'\n");
+        query.append("    WHERE country_code='" + country_code + "' AND city='" + city + "'\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -178,15 +178,15 @@ public class GeoLocation {
     }
 
     @GET
-    @Path("/delete/{country}/{city}")
+    @Path("/delete/{country_code}/{city}")
     @Produces("text/plain")
-    public Response deleteGeoLocation(@PathParam("country") String country,
+    public Response deleteGeoLocation(@PathParam("country_code") String country_code,
                                       @PathParam("city") String city) {
 
         StringBuilder query = new StringBuilder();
 
         query.append("DELETE FROM geo_location \n");
-        query.append("    WHERE country='" + country + "' AND city='" + city + "'\n");
+        query.append("    WHERE country_code='" + country_code + "' AND city='" + city + "'\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 

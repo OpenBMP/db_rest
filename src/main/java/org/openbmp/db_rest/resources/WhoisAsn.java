@@ -40,7 +40,7 @@ public class WhoisAsn {
 
 	/**
 	 * Initialize the class Sets the data source
-	 * 
+	 *
 	 * @throws
 	 */
 	@PostConstruct
@@ -63,7 +63,7 @@ public class WhoisAsn {
 	@Produces("application/json")
 	public Response getWhois(@QueryParam("where") String where,
 							 @QueryParam("limit") Integer limit) {
-		
+
 		if (where == null) {
 			System.out.println("Bad request, no where clause");
 			return Response.status(400).entity("")
@@ -72,11 +72,11 @@ public class WhoisAsn {
 					.allow("OPTIONS")
 					.build();
 		}
-		
+
 		String limit_str = "";
 		if (limit != null && limit >= 1 && limit <= 500000)
 			limit_str += " limit " + limit;
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
 		query.append("    FROM gen_whois_asn w LEFT JOIN \n");
@@ -91,18 +91,18 @@ public class WhoisAsn {
 		query.append(where);
 		query.append("    group by w.asn\n");
 		query.append(limit_str);
-	
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-	
+
 	@GET
 	@Path("/count")
 	@Produces("application/json")
 	public Response getWhoisCount(@QueryParam("where") String where) {
-		
+
 		if (where == null) {
 			System.out.println("Bad request, no where clause");
 			return Response.status(400).entity("")
@@ -111,29 +111,29 @@ public class WhoisAsn {
 					.allow("OPTIONS")
 					.build();
 		}
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT count(*) as count\n");
 		query.append("    FROM gen_whois_asn w \n");
         query.append("    WHERE ");
 		query.append(where);
-	
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-		
+
 	@GET
 	@Path("/{asn}")
 	@Produces("application/json")
 	public Response getWhoisAsn(@PathParam("asn") Integer asn,
 							  @QueryParam("where") String where) {
-	
+
 		String where_str = " gen_whois_asn.asn = " + asn;
 		if (where != null)
 			where_str += " and " + where;
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT gen_whois_asn.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
 		query.append("    FROM gen_whois_asn gen_whois_asn LEFT JOIN ");
@@ -142,30 +142,48 @@ public class WhoisAsn {
 		query.append("    WHERE ");
 		query.append(where_str);
 		query.append("    group by gen_whois_asn.asn\n");
-	
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 
-	@GET
-	@Path("/all")
-	@Produces("application/json")
-	public Response getAll() {
+    @GET
+    @Path("/get/{part}/{limit}")
+    @Produces("application/json")
+    public Response getAll(@PathParam("part") Integer part,
+                           @PathParam("limit") Integer limit) {
 
-		StringBuilder query = new StringBuilder();
+        StringBuilder query = new StringBuilder();
 
-		query.append("SELECT asn,as_name,city,state_prov,country,org_name\n");
-		query.append("    FROM gen_whois_asn \n");
+        query.append("SELECT asn,as_name,city,state_prov,country,org_name,city_lat,city_long\n");
+        query.append("    FROM gen_whois_asn \n");
+        query.append("     LIMIT " + (part - 1) * limit + "," + limit + "   \n ");
 
-		System.out.println("QUERY: \n" + query.toString() + "\n");
+        System.out.println("QUERY: \n" + query.toString() + "\n");
 
-		return RestResponse.okWithBody(
-				DbUtils.select_DbToJson(mysql_ds, query.toString()));
-	}
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
 
-	@GET
+    @GET
+    @Path("/getcount")
+    @Produces("application/json")
+    public Response getGeoLocationCount() {
+
+        StringBuilder query = new StringBuilder();
+
+        // Query first for the prefix/len
+        query.append("SELECT COUNT(*) as COUNT FROM gen_whois_asn\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
 	@Path("/{asn}/related")
 	@Produces("application/json")
 	public Response getRelatedAS(@PathParam("asn") Integer asn) {

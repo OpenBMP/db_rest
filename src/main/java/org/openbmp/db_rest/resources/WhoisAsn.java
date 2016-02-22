@@ -150,32 +150,14 @@ public class WhoisAsn {
 	}
 
     @GET
-    @Path("/get/{part}/{limit}")
+    @Path("/all")
     @Produces("application/json")
-    public Response getAll(@PathParam("part") Integer part,
-                           @PathParam("limit") Integer limit) {
+    public Response getAll() {
 
         StringBuilder query = new StringBuilder();
 
-        query.append("SELECT asn,as_name,city,state_prov,country,org_name,city_lat,city_long\n");
+        query.append("SELECT asn,as_name,city,state_prov,country,org_name\n");
         query.append("    FROM gen_whois_asn \n");
-        query.append("     LIMIT " + (part - 1) * limit + "," + limit + "   \n ");
-
-        System.out.println("QUERY: \n" + query.toString() + "\n");
-
-        return RestResponse.okWithBody(
-                DbUtils.select_DbToJson(mysql_ds, query.toString()));
-    }
-
-    @GET
-    @Path("/getcount")
-    @Produces("application/json")
-    public Response getGeoLocationCount() {
-
-        StringBuilder query = new StringBuilder();
-
-        // Query first for the prefix/len
-        query.append("SELECT COUNT(*) as COUNT FROM gen_whois_asn\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 

@@ -156,7 +156,7 @@ public class WhoisAsn {
 
         StringBuilder query = new StringBuilder();
 
-        query.append("SELECT asn,as_name,city,state_prov,country,org_name\n");
+        query.append("SELECT asn,as_name,city,state_prov,country,org_name,city_lat,city_long\n");
         query.append("    FROM gen_whois_asn \n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");

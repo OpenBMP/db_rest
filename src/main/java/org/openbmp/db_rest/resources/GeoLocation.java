@@ -22,83 +22,74 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-@Path("/geoip")
-public class GeoIp {
-	@Context ServletContext ctx;
-	@Context UriInfo uri;
+@Path("/geolocation")
+public class GeoLocation {
+    @Context
+    ServletContext ctx;
+    @Context
+    UriInfo uri;
 
-	private DataSource mysql_ds;
+    private DataSource mysql_ds;
 
-	/**
-	 * Initialize the class Sets the data source
-	 *
-	 * @throws
-	 */
-	@PostConstruct
-	public void init() {
-		InitialContext initctx = null;
-		try {
+    /**
+     * Initialize the class Sets the data source
+     *
+     * @throws
+     */
+    @PostConstruct
+    public void init() {
+        InitialContext initctx = null;
+        try {
 
-			initctx = new InitialContext();
-			mysql_ds = (DataSource) initctx
-					.lookup("java:/comp/env/jdbc/MySQLDB");
+            initctx = new InitialContext();
+            mysql_ds = (DataSource) initctx
+                    .lookup("java:/comp/env/jdbc/MySQLDB");
 
-		} catch (NamingException e) {
-			System.err
-					.println("ERROR: Cannot find resource configuration, check context.xml config");
-			e.printStackTrace();
-		}
-	}
+        } catch (NamingException e) {
+            System.err
+                    .println("ERROR: Cannot find resource configuration, check context.xml config");
+            e.printStackTrace();
+        }
+    }
 
-	@GET
-	@Path("/{IP}")
-	@Produces("application/json")
-	public Response getRibByLookup(@PathParam("IP") String ip,
-						   @QueryParam("where") String where) {
-
-		StringBuilder query = new StringBuilder();
-
-		String addrType = "ipv4";
-		if (ip.indexOf(':') >= 0)
-			addrType = "ipv6";
-
-		// Query first for the prefix/len
-		query.append("SELECT * FROM v_geo_ip\n");
-		query.append("        WHERE ip_end_bin >= inet6_aton('" + ip + "')\n");
-		query.append("               and ip_start_bin <= inet6_aton('" + ip + "') and addr_type = '" + addrType + "'\n ");
-
-		if (where != null)
-        	query.append(" AND " + where);
-
-		query.append("        ORDER BY ip_end_bin limit 1\n ");
-
-
-		System.out.println("QUERY: \n" + query.toString() + "\n");
-
-		return RestResponse.okWithBody(
-					DbUtils.select_DbToJson(mysql_ds, query.toString()));
-	}
-
-	@GET
-    @Path("/get/{page}/{limit}")
+    @GET
+    @Path("/{countryCode}/{city}")
     @Produces("application/json")
-    public Response getGeoIPList(@PathParam("page") int page,
-                                 @PathParam("limit") int limit,
-                                 @QueryParam("where") String whereClause,
-                                 @QueryParam("sort") String sort,
-                                 @QueryParam("sortDirection") String sortDirection) {
+    public Response getCoordinates(@PathParam("countryCode") String countryCode,
+                                   @PathParam("city") String city) {
 
         StringBuilder query = new StringBuilder();
 
         // Query first for the prefix/len
-        query.append("SELECT * FROM v_geo_ip\n");
+        query.append("    SELECT latitude,longitude FROM geo_location\n");
+        query.append("        WHERE country = '" + countryCode + "'\n");
+        query.append("        AND city = LOWER('" + city + "')\n ");
+        query.append("        LIMIT 1\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
+    @Path("/get/{page}/{limit}")
+    @Produces("application/json")
+    public Response getGeoLocationList(@PathParam("page") int page,
+                                       @PathParam("limit") int limit,
+                                       @QueryParam("where") String whereClause,
+                                       @QueryParam("sort") String sort,
+                                       @QueryParam("sortDirection") String sortDirection) {
+
+        StringBuilder query = new StringBuilder();
+
+        // Query first for the prefix/len
+        query.append("SELECT * FROM geo_location\n");
         if (whereClause != null && !whereClause.isEmpty())
             query.append(whereClause + "\n");
         if (sort != null && sortDirection != null)
@@ -115,12 +106,12 @@ public class GeoIp {
     @GET
     @Path("/getcount")
     @Produces("application/json")
-    public Response getGeoIPCount(@QueryParam("where") String whereClause) {
+    public Response getGeoLocationCount(@QueryParam("where") String whereClause) {
 
         StringBuilder query = new StringBuilder();
 
         // Query first for the prefix/len
-        query.append("SELECT COUNT(*) as COUNT FROM v_geo_ip\n");
+        query.append("SELECT COUNT(*) as COUNT FROM geo_location\n");
         if (whereClause != null && !whereClause.isEmpty())
             query.append(whereClause + "\n");
 
@@ -133,26 +124,16 @@ public class GeoIp {
     @POST
     @Path("/insert")
     @Produces("text/plain")
-    public Response insertGeoIP(@QueryParam("ip_start") String ip_start,
-                                @QueryParam("ip_end") String ip_end,
-                                @QueryParam("country") String country,
-                                @QueryParam("stateprov") String stateprov,
+    public Response insertGeoIP(@QueryParam("country") String country,
                                 @QueryParam("city") String city,
                                 @QueryParam("latitude") String latitude,
-                                @QueryParam("longitude") String longitude,
-                                @QueryParam("timezone_name") String timezone_name,
-                                @QueryParam("timezone_offset") String timezone_offset,
-                                @QueryParam("isp_name") String isp_name) {
+                                @QueryParam("longitude") String longitude) {
 
         StringBuilder query = new StringBuilder();
 
-        String addrType = "ipv4";
-        if (ip_start.indexOf(':') >= 0)
-            addrType = "ipv6";
-
-        query.append("INSERT INTO geo_ip \n");
-        query.append("    (ip_start,ip_end,country,stateprov,city,latitude,longitude,addr_type,timezone_name,timezone_offset,isp_name)\n");
-        query.append("    VALUES (inet6_aton('" + ip_start + "'),inet6_aton('" + ip_end + "'),'" + country + "','" + stateprov + "','" + city + "'," + latitude + "," + longitude + ",'" + addrType + "','" + timezone_name + "'," + timezone_offset + ",'" + isp_name + "')\n");
+        query.append("INSERT INTO geo_location \n");
+        query.append("    (country,city,latitude,longitude)\n");
+        query.append("    VALUES ('" + country + "',LOWER('" + city + "')," + latitude + "," + longitude + ")\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -163,26 +144,26 @@ public class GeoIp {
             e.printStackTrace();
             return RestResponse.okWithBody(e.getMessage());
         }
-
     }
 
     @GET
-    @Path("/update/{ip_start}/{col}/{value}")
+    @Path("/update/{country}/{city}/{col}/{value}")
     @Produces("text/plain")
-    public Response updateGeoIP(@PathParam("ip_start") String ip_start,
-                                 @PathParam("col") String column,
-                                 @PathParam("value") String value) {
+    public Response updateGeoLocation(@PathParam("country") String country,
+                                      @PathParam("city") String city,
+                                      @PathParam("col") String column,
+                                      @PathParam("value") String value) {
 
         StringBuilder query = new StringBuilder();
 
         boolean valueIsString = true;
 
-        if(column=="latitude"||column=="longitude")
-            valueIsString=false;
+        if (column == "latitude" || column == "longitude")
+            valueIsString = false;
 
-        query.append("UPDATE geo_ip \n");
+        query.append("UPDATE geo_location \n");
         query.append("    SET " + column + "=" + (valueIsString ? ("'" + value + "'") : value) + "\n");
-        query.append("    WHERE ip_start="+"inet6_aton('"+ip_start+"')\n");
+        query.append("    WHERE country='" + country + "' AND city='" + city + "'\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -197,14 +178,15 @@ public class GeoIp {
     }
 
     @GET
-    @Path("/delete/{ip_start}")
+    @Path("/delete/{country}/{city}")
     @Produces("text/plain")
-    public Response deleteGeoIP(@PathParam("ip_start") String ip_start){
+    public Response deleteGeoLocation(@PathParam("country") String country,
+                                      @PathParam("city") String city) {
 
         StringBuilder query = new StringBuilder();
 
-        query.append("DELETE FROM geo_ip \n");
-        query.append("    WHERE ip_start="+"inet6_aton('"+ip_start+"')\n");
+        query.append("DELETE FROM geo_location \n");
+        query.append("    WHERE country='" + country + "' AND city='" + city + "'\n");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -225,7 +207,7 @@ public class GeoIp {
 
         StringBuilder query = new StringBuilder();
 
-        query.append("DESCRIBE geo_ip");
+        query.append("DESCRIBE geo_location");
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
@@ -255,15 +237,13 @@ public class GeoIp {
 
         ArrayList<String> typeArray = new ArrayList<String>();
 
-        String statement;
-//        = "DELETE FROM geo_ip";
-//        try {
-//            System.out.println("Deleted: " + DbUtils.update_Db(mysql_ds, statement.toString()));
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//            return RestResponse.okWithBody(e.getMessage());
-//        }
-
+        String statement = "DELETE FROM geo_location";
+        try {
+            System.out.println("Deleted: " + DbUtils.update_Db(mysql_ds, statement.toString()));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return RestResponse.okWithBody(e.getMessage());
+        }
         String[] tempArray = indexes.split(",");
 
         for (int i = 0; i < tempArray.length; i++) {
@@ -275,36 +255,28 @@ public class GeoIp {
             }
         }
 
-        String columns = fieldArray.toString().substring(1, fieldArray.toString().length() - 1)+",addr_type";
-
-        String addrType = "ipv4";
+        String columns = fieldArray.toString().substring(1, fieldArray.toString().length() - 1);
 
         String line;
-        statement = "INSERT IGNORE INTO geo_ip (" + columns + ") VALUES ";
+        statement = "INSERT IGNORE INTO geo_location (" + columns + ") VALUES ";
         try {
             while ((line = reader.readLine()) != null) {
                 if (pointer % INSERT_THRESHOLD == 0) {
                     statement = statement.substring(0, statement.length() - 1);
                     System.out.println("QUERY: \n" + statement.toString() + "\n");
                     affectedRows += DbUtils.update_Db(mysql_ds, statement.toString());
-                    statement = "INSERT IGNORE INTO geo_ip (" + columns + ") VALUES ";
+                    statement = "INSERT IGNORE INTO geo_location (" + columns + ") VALUES ";
                 }
                 statement += "(";
                 String[] values = line.split(delimiter);
                 for (int i = 0; i < indexArray.size(); i++) {
                     if (typeArray.get(i).contains("char"))
                         statement += "\"" + values[indexArray.get(i)].replace('\"', '\'') + "\",";
-                    else if(fieldArray.get(i).startsWith("ip")){
-                        statement += "inet6_aton(\"" + values[indexArray.get(i)] + "\"),";
-                        if (values[indexArray.get(i)].indexOf(':') >= 0)
-                            addrType = "ipv6";
-                        else
-                            addrType = "ipv4";
-                    }
                     else
                         statement += values[indexArray.get(i)] + ",";
                 }
-                statement += "\""+addrType+"\"),";
+                statement = statement.substring(0, statement.length() - 1);
+                statement += "),";
                 pointer++;
             }
 
@@ -318,7 +290,7 @@ public class GeoIp {
                     "Exception:" + e.getMessage());
         }
 
-        return RestResponse.okWithBody("Success! Rows inserted: "+
+        return RestResponse.okWithBody("Success! Rows inserted: " +
                 Integer.toString(affectedRows));
     }
 

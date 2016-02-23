@@ -1,5 +1,7 @@
 package org.openbmp.db_rest.resources;
 
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 import org.openbmp.db_rest.DbUtils;
 import org.openbmp.db_rest.RestResponse;
 
@@ -12,6 +14,14 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by junbao on 12/16/15.
@@ -110,5 +120,51 @@ public class Security {
         queryBuilder.append(" LIMIT " + limit + " OFFSET " + (page - 1) * limit);
         String res = DbUtils.select_DbToJson(mysql_ds, queryBuilder.toString());
         return RestResponse.okWithBody(res);
+    }
+
+    @GET
+    @Path("/stats")
+    @Produces("application/json")
+    public Response getStats() {
+        String total = "SELECT count(*) total FROM gen_prefix_validation";
+        String rpkiTotal = "SELECT count(*) rpkiTotal FROM gen_prefix_validation WHERE rpki_origin_as IS NOT NULL";
+        String irrTotal = "SELECT count(*) irrTotal FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL";
+        String neitherTotal = "SELECT count(*) neitherTotal FROM gen_prefix_validation WHERE irr_origin_as IS NULL and rpki_origin_as IS NULL";
+        String bothTotal = "SELECT count(*) bothTotal FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL";
+
+        String totalVio = "SELECT count(*) totalVio FROM gen_prefix_validation WHERE (irr_origin_as IS NOT NULL and irr_origin_as != recv_origin_as) or (rpki_origin_as IS NOT null and rpki_origin_as != recv_origin_as)";
+        String rpkiVio = "SELECT count(*) rpkiVio FROM gen_prefix_validation WHERE rpki_origin_as IS NOT NULL AND rpki_origin_as IS NOT null and rpki_origin_as != recv_origin_as";
+        String irrVio = "SELECT count(*) irrVio FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL AND irr_origin_as IS NOT NULL and irr_origin_as != recv_origin_as";
+        String bothVio = "SELECT count(*) bothVio FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL AND recv_origin_as != irr_origin_as or recv_origin_as != rpki_origin_as";
+
+        StringWriter swriter = new StringWriter();
+        try {
+            Connection conn = mysql_ds.getConnection();
+            Statement stmt = conn.createStatement();
+
+            String[] queries = {total, rpkiTotal, irrTotal, neitherTotal, bothTotal, totalVio, rpkiVio, irrVio, bothVio};
+            List<ResultSet> resList = new ArrayList<ResultSet>(9);
+            JsonFactory jfac = new JsonFactory();
+            JsonGenerator jgen = jfac.createJsonGenerator(swriter);
+
+            jgen.writeStartObject();
+            for (String query : queries) {
+                resList.add(stmt.executeQuery(query));
+            }
+            jgen.writeObjectFieldStart("data");
+            for (ResultSet rs : resList) {
+                rs.next();
+                jgen.writeNumberField(rs.getMetaData().getColumnLabel(1), rs.getBigDecimal(1));
+            }
+            jgen.writeEndObject();
+            jgen.writeEndObject();
+            jgen.close();
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+        }
+
+        return RestResponse.okWithBody(swriter.toString());
     }
 }

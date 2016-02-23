@@ -130,6 +130,8 @@ public class GeoLocation {
                                 @QueryParam("longitude") String longitude) {
 
         StringBuilder query = new StringBuilder();
+        country_code = country_code.toLowerCase();
+        city = city.toLowerCase();
 
         query.append("INSERT INTO geo_location \n");
         query.append("    (country_code,city,latitude,longitude)\n");
@@ -155,6 +157,9 @@ public class GeoLocation {
                                       @PathParam("value") String value) {
 
         StringBuilder query = new StringBuilder();
+
+        country_code = country_code.toLowerCase();
+        city = city.toLowerCase();
 
         boolean valueIsString = true;
 
@@ -255,10 +260,14 @@ public class GeoLocation {
             }
         }
 
+        int indexOfCountryCode = fieldArray.indexOf("country_code");
+        int indexOfCity = fieldArray.indexOf("city");
+
         String columns = fieldArray.toString().substring(1, fieldArray.toString().length() - 1);
 
         String line;
         statement = "INSERT IGNORE INTO geo_location (" + columns + ") VALUES ";
+
         try {
             while ((line = reader.readLine()) != null) {
                 if (pointer % INSERT_THRESHOLD == 0) {
@@ -269,6 +278,10 @@ public class GeoLocation {
                 }
                 statement += "(";
                 String[] values = line.split(delimiter);
+
+                values[indexOfCountryCode]=values[indexOfCountryCode].toLowerCase();
+                values[indexOfCity]=values[indexOfCity].toLowerCase();
+
                 for (int i = 0; i < indexArray.size(); i++) {
                     if (typeArray.get(i).contains("char"))
                         statement += "\"" + values[indexArray.get(i)].replace('\"', '\'') + "\",";

@@ -40,7 +40,7 @@ public class WhoisAsn {
 
 	/**
 	 * Initialize the class Sets the data source
-	 * 
+	 *
 	 * @throws
 	 */
 	@PostConstruct
@@ -63,7 +63,7 @@ public class WhoisAsn {
 	@Produces("application/json")
 	public Response getWhois(@QueryParam("where") String where,
 							 @QueryParam("limit") Integer limit) {
-		
+
 		if (where == null) {
 			System.out.println("Bad request, no where clause");
 			return Response.status(400).entity("")
@@ -72,11 +72,11 @@ public class WhoisAsn {
 					.allow("OPTIONS")
 					.build();
 		}
-		
+
 		String limit_str = "";
 		if (limit != null && limit >= 1 && limit <= 500000)
 			limit_str += " limit " + limit;
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT w.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
 		query.append("    FROM gen_whois_asn w LEFT JOIN \n");
@@ -91,18 +91,18 @@ public class WhoisAsn {
 		query.append(where);
 		query.append("    group by w.asn\n");
 		query.append(limit_str);
-	
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-	
+
 	@GET
 	@Path("/count")
 	@Produces("application/json")
 	public Response getWhoisCount(@QueryParam("where") String where) {
-		
+
 		if (where == null) {
 			System.out.println("Bad request, no where clause");
 			return Response.status(400).entity("")
@@ -111,29 +111,29 @@ public class WhoisAsn {
 					.allow("OPTIONS")
 					.build();
 		}
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT count(*) as count\n");
 		query.append("    FROM gen_whois_asn w \n");
         query.append("    WHERE ");
 		query.append(where);
-	
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-		
+
 	@GET
 	@Path("/{asn}")
 	@Produces("application/json")
 	public Response getWhoisAsn(@PathParam("asn") Integer asn,
 							  @QueryParam("where") String where) {
-	
+
 		String where_str = " gen_whois_asn.asn = " + asn;
 		if (where != null)
 			where_str += " and " + where;
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT gen_whois_asn.*,isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,origin_v6_prefixes\n");
 		query.append("    FROM gen_whois_asn gen_whois_asn LEFT JOIN ");
@@ -142,25 +142,38 @@ public class WhoisAsn {
 		query.append("    WHERE ");
 		query.append(where_str);
 		query.append("    group by gen_whois_asn.asn\n");
-	
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
 
-	@GET
-	@Path("/all")
+    @GET
+    @Path("/all")
+    @Produces("application/json")
+    public Response getAll() {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("SELECT asn,as_name,city,state_prov,country,org_name,city_lat,city_long\n");
+        query.append("    FROM gen_whois_asn \n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+    }
+
+    @GET
+	@Path("/{asn}/related")
 	@Produces("application/json")
-	public Response getUpstream() {
+	public Response getRelatedAS(@PathParam("asn") Integer asn) {
 
 		StringBuilder query = new StringBuilder();
 
-		query.append("SELECT ASCollection.asn,upstreams,downstreams,as_name,city,state_prov,country,org_name\n");
-		query.append("    FROM (SELECT asn, GROUP_CONCAT(DISTINCT asn_left) as upstreams, GROUP_CONCAT(DISTINCT asn_right) as downstreams \n");
-		query.append("         FROM as_path_analysis GROUP BY asn) ASCollection\n");
-		query.append("    LEFT JOIN gen_whois_asn w ON (ASCollection.asn = w.asn)\n");
-		query.append("    ORDER BY ASCollection.asn\n");
+		query.append("SELECT GROUP_CONCAT(DISTINCT asn_left) as upstreams, GROUP_CONCAT(DISTINCT asn_right) as downstreams \n");
+		query.append("      FROM as_path_analysis WHERE asn=" + asn + "\n");
 
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 

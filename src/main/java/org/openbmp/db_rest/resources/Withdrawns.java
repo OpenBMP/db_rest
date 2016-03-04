@@ -304,11 +304,13 @@ public class Withdrawns {
 			startTimestamp="'" + startTimestamp + "'";
 
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT from_unixtime(unix_timestamp(timestamp) - unix_timestamp(timestamp) % " +
+		query.append("SELECT from_unixtime(unix_timestamp(l.timestamp) - unix_timestamp(l.timestamp) % " +
 				interval + ") as IntervalTime,\n");
 		query.append("               count(*) as Count\n");
-		query.append("     FROM withdrawn_log\n");
-		query.append("      WHERE timestamp >= "+startTimestamp +" AND timestamp <= " + endTimestamp + "\n");
+		query.append("      FROM withdrawn_log l\n");
+		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
+		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
+		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");		query.append("      WHERE l.timestamp >= "+startTimestamp +" AND l.timestamp <= " + endTimestamp + "\n");
 		if(searchPeer!=null && !searchPeer.isEmpty()) {
 			query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
 		}
@@ -318,7 +320,7 @@ public class Withdrawns {
 			query.append("                     AND (prefix_len = \"" + prefix[1] + "\")\n");
 		}
 		query.append("      GROUP BY IntervalTime\n");
-		query.append("      ORDER BY timestamp desc");
+		query.append("      ORDER BY l.timestamp");
 
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 

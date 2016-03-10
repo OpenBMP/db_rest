@@ -125,7 +125,7 @@ public class Updates {
 		if(searchPrefix!=null && !searchPrefix.isEmpty()) {
 			String[] prefix = searchPrefix.split("/");
 			query.append("                     AND (log.prefix = \"" + prefix[0] + "\")\n");
-			query.append("                     AND (log.prefix_len = \"" + prefix[1] + "\")\n");
+			query.append("                     AND (log.prefix_len = " + prefix[1] + ")\n");
 		}
 		query.append("      GROUP BY " + groupBy+"\n");
 		query.append("      ORDER BY Count desc) l\n");
@@ -329,7 +329,7 @@ public class Updates {
         if(searchPrefix!=null && !searchPrefix.isEmpty()) {
             String[] prefix = searchPrefix.split("/");
             query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
-            query.append("                     AND (prefix_len = \"" + prefix[1] + "\")\n");
+            query.append("                     AND (prefix_len = " + prefix[1] + ")\n");
         }
         query.append("      GROUP BY IntervalTime\n");
         query.append("      ORDER BY l.timestamp");

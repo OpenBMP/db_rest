@@ -50,4 +50,13 @@
 		<url-pattern>/v1/*</url-pattern>
 	</servlet-mapping>
 
+	<filter>
+		<filter-name>AuthenticationFilter</filter-name>
+		<filter-class>org.openbmp.db_rest.helpers.RestAuthenticationFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>AuthenticationFilter</filter-name>
+		<url-pattern>/v1/*</url-pattern>
+	</filter-mapping>
+
 </web-app>

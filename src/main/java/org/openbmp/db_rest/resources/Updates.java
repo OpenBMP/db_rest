@@ -320,9 +320,10 @@ public class Updates {
                 + interval + ") as IntervalTime,\n");
         query.append("               count(*) as Count\n");
         query.append("      FROM path_attr_log l\n");
-		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
-		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
-		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");        query.append("      WHERE l.timestamp >= "+startTimestamp +" AND l.timestamp <= " + endTimestamp + "\n");
+//		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
+//		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
+//		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
+		query.append("      WHERE l.timestamp >= "+startTimestamp +" AND l.timestamp <= " + endTimestamp + "\n");
         if(searchPeer!=null && !searchPeer.isEmpty()) {
             query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
         }

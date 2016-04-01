@@ -58,6 +58,8 @@ public class RestAuthenticationFilter implements javax.servlet.Filter {
                         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
                         httpServletResponse
                                 .setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        // Allow the browser to prompt for user/pass using basic auth
+                        httpServletResponse.setHeader("WWW-Authenticate", "Basic");
                     }
                 } else {
                     filter.doFilter(request, response);

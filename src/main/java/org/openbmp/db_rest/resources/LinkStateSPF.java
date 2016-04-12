@@ -116,7 +116,8 @@ public class LinkStateSPF {
 			query.append("    FROM " + tableName + " igp_ospf JOIN ls_nodes n ON (igp_ospf.src_node_hash_id = n.hash_id)\n");
 			query.append("            JOIN ls_nodes nei ON (igp_ospf.nh_node_hash_id = nei.hash_id and nei.peer_hash_id = '" + peerHashId +"')\n");
 			query.append("            LEFT JOIN ls_links l ON (igp_ospf.nh_node_hash_id = l.remote_node_hash_id and\n");
-			query.append("                           igp_ospf.root_node_hash_id = l.local_node_hash_id and l.peer_hash_id = '" + peerHashId  + "')\n");
+			query.append("                           igp_ospf.root_node_hash_id = l.local_node_hash_id and l.peer_hash_id = '" + peerHashId  + "'\n");
+			query.append("                                 AND not l.neighbor_addr = '0.0.0.0')\n");
 			query.append("    WHERE best = TRUE ");
 			query.append(where);
 			query.append("    GROUP BY igp_ospf.prefix,igp_ospf.prefix_len,l.neighbor_addr\n");

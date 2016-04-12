@@ -22,7 +22,7 @@ public class RestResponse {
 	public static Response okWithBody(String body) {
 		return Response.status(200).entity(body)
 				.header("Access-Control-Allow-Origin", "*")
-				.header("Access-Control-Allow-Methods", "GET")
+				.header("Access-Control-Allow-Methods", "GET, POST")
 				.allow("OPTIONS")
 				.build();
 	}

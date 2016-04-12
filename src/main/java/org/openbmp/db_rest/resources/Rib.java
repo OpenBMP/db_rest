@@ -341,15 +341,24 @@ public class Rib {
 
         StringBuilder query = new StringBuilder();
 
-
-        // Query first for the prefix/len
-        query.append("SELECT distinct prefix,prefix_len,prefix_bits \n");
-        query.append("        FROM rib\n");
-        query.append("        WHERE isWithdrawn = False and prefix_bcast_bin >= inet6_aton('" + ip + "')\n");
-        query.append("               and prefix_bin <= inet6_aton('" + ip + "')\n");
-        query.append("        ORDER BY prefix_bin desc limit 1\n");
-
         long startTime = System.currentTimeMillis();
+
+        // Query for the best match based on prefix_bits (range query is too slow)
+        String ip_bits = IpAddr.getIpBits(ip);
+
+        query.append("SELECT prefix,prefix_len,prefix_bits \n");
+        query.append("        FROM rib\n");
+        query.append("        WHERE isWithdrawn = False AND prefix_bits IN (\n");
+
+        for (int len = ip_bits.length(); len > 0; len--) {
+            query.append("'" + ip_bits.substring(0, len) + "'");
+            if (len > 1) {
+                query.append(',');
+            }
+        }
+        query.append(") ");
+        query.append("        ORDER BY prefix_bin desc, prefix_len desc limit 1\n");
+
         System.out.println("QUERY: \n" + query.toString() + "\n");
 
         Map<String, List<DbColumnDef>> ResultsMap;
@@ -372,9 +381,7 @@ public class Rib {
                 query.append(" AND prefixlen = " + prefix_len);
 
             } else {
-
-
-                String ip_bits = IpAddr.getIpBits(prefix);
+                ip_bits = IpAddr.getIpBits(prefix);
 
                 query.append(" prefix_bits IN (");
                 for (int len = ip_bits.length(); len > 0; len--) {

@@ -22,6 +22,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -507,7 +508,7 @@ public class Rib {
                                   @QueryParam("where") String where,
                                   @QueryParam("orderby") String orderby) {
 
-        return getRibHisotry(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.UPDATES, null);
+        return getRibHistory(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.UPDATES, null);
     }
 
     @GET
@@ -521,7 +522,7 @@ public class Rib {
                                   @QueryParam("where") String where,
                                   @QueryParam("orderby") String orderby) {
 
-        return getRibHisotry(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.WITHDRAWS, null);
+        return getRibHistory(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.WITHDRAWS, null);
     }
 
     @GET
@@ -536,7 +537,7 @@ public class Rib {
                                         @QueryParam("where") String where,
                                         @QueryParam("orderby") String orderby) {
 
-        return getRibHisotry(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.UPDATES, peerHashId);
+        return getRibHistory(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.UPDATES, peerHashId);
     }
 
 
@@ -552,10 +553,10 @@ public class Rib {
                                            @QueryParam("where") String where,
                                            @QueryParam("orderby") String orderby) {
 
-        return getRibHisotry(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.WITHDRAWS, peerHashId);
+        return getRibHistory(prefix, length, limit, hours, timestamp, where, orderby, HISTORY_TYPE.WITHDRAWS, peerHashId);
     }
 
-    private Response getRibHisotry(String prefix, Integer length,
+    private Response getRibHistory(String prefix, Integer length,
                                    Integer limit, Integer hours, String timestamp, String where, String orderby,
                                    HISTORY_TYPE type, String peerHashId) {
 
@@ -574,13 +575,21 @@ public class Rib {
         }
 
         if (timestamp == null) {
-
             if (hours != null && hours >= 2)
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval " + hours + " hour)");
             else
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval 2 hour)");
             where_str.append(" and LastModified <= current_timestamp ");
         } else {  // replace default current_timestamp
+            if (timestamp.equals("lastupdate")) {
+                String queryForLastTimestamp = "SELECT timestamp FROM path_attr_log WHERE prefix = '"
+                        + prefix + "' AND prefix_len = " + length + " ORDER BY timestamp DESC LIMIT 1";
+                Map<String,List<DbColumnDef>> lastTimestampMap = DbUtils.select_DbToMap(mysql_ds, queryForLastTimestamp);
+                if (lastTimestampMap.size() > 0)
+                    timestamp = lastTimestampMap.keySet().iterator().next();
+                else
+                    timestamp = new Timestamp(System.currentTimeMillis()).toString();
+            }
             if (hours != null && hours >= 2)
                 where_str.append(" and LastModified >= date_sub('" + timestamp + "', interval " + hours + " hour)");
             else
@@ -611,10 +620,9 @@ public class Rib {
 	 * Cleanup
 	 */
 	/**
-     @PreDestroy 
-     void destory() { 
-     	System.err.println("DESTORY");
-     }
-     */
+    @PreDestroy
+    void destory() {
+        System.err.println("DESTORY");
+    }
+    */
 }
-

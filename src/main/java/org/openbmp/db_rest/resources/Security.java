@@ -1,7 +1,5 @@
 package org.openbmp.db_rest.resources;
 
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
 import org.openbmp.db_rest.DbUtils;
 import org.openbmp.db_rest.RestResponse;
 
@@ -14,14 +12,6 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.io.StringWriter;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by junbao on 12/16/15.
@@ -54,10 +44,10 @@ public class Security {
 
     private void processParas(int asn, String prefix, String whereClause, StringBuilder queryBuilder) {
         if (whereClause != null && !whereClause.isEmpty())
-            queryBuilder.append(whereClause + '\n');
+            queryBuilder.append(whereClause + ' ');
         if (asn != 0) {
             String conn = whereClause == null ? " WHERE " : " AND ";
-            queryBuilder.append(conn + asn + " IN (recv_origin_as, rpki_origin_as, irr_origin_as)");
+            queryBuilder.append(conn + asn + " IN (recv_origin_as, rpki_origin_as, irr_origin_as) ");
         }
         if (prefix != null && !prefix.isEmpty()) {
             String conn;
@@ -65,7 +55,7 @@ public class Security {
                 conn = " WHERE ";
             else conn = " AND ";
             if (prefix.indexOf('/') == -1)
-                queryBuilder.append(conn + " prefix = inet6_aton('" + prefix + "')");
+                queryBuilder.append(conn + " prefix = inet6_aton('" + prefix + "') ");
             else {
                 int len = Integer.valueOf(prefix.split("/")[1]);
                 prefix = prefix.split("/")[0];
@@ -125,19 +115,29 @@ public class Security {
     @GET
     @Path("/stats")
     @Produces("application/json")
-    public Response getStats() {      
-        
-        StringBuilder queryBuilder = new StringBuilder();
+    public Response getStats(@QueryParam("asn") int asn,
+                             @QueryParam("prefix") String prefix,
+                             @QueryParam("where") String whereClause) {
+        String[] whereArray = {
+                " rpki_origin_as IS NOT NULL ",
+                " irr_origin_as IS NOT NULL ",
+                " irr_origin_as IS NULL and rpki_origin_as IS NULL ",
+                " irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL ",
+                " (irr_origin_as IS NOT NULL and irr_origin_as != recv_origin_as) or (rpki_origin_as IS NOT null and rpki_origin_as != recv_origin_as) ",
+                " rpki_origin_as IS NOT NULL AND rpki_origin_as IS NOT null and rpki_origin_as != recv_origin_as ",
+                " irr_origin_as IS NOT NULL AND irr_origin_as IS NOT NULL and irr_origin_as != recv_origin_as ",
+                " irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL AND recv_origin_as != irr_origin_as or recv_origin_as != rpki_origin_as ",
+        };
 
-        queryBuilder.append("SELECT count(*) total FROM gen_prefix_validation UNION ");
-        queryBuilder.append("SELECT count(*) rpkiTotal FROM gen_prefix_validation WHERE rpki_origin_as IS NOT NULL UNION ALL ");
-        queryBuilder.append("SELECT count(*) irrTotal FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL UNION ALL ");
-        queryBuilder.append("SELECT count(*) neitherTotal FROM gen_prefix_validation WHERE irr_origin_as IS NULL and rpki_origin_as IS NULL UNION ALL ");
-        queryBuilder.append("SELECT count(*) bothTotal FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL UNION ALL ");
-        queryBuilder.append("SELECT count(*) totalVio FROM gen_prefix_validation WHERE (irr_origin_as IS NOT NULL and irr_origin_as != recv_origin_as) or (rpki_origin_as IS NOT null and rpki_origin_as != recv_origin_as) UNION ALL ");
-        queryBuilder.append("SELECT count(*) rpkiVio FROM gen_prefix_validation WHERE rpki_origin_as IS NOT NULL AND rpki_origin_as IS NOT null and rpki_origin_as != recv_origin_as UNION ALL ");
-        queryBuilder.append("SELECT count(*) irrVio FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL AND irr_origin_as IS NOT NULL and irr_origin_as != recv_origin_as UNION ALL ");
-        queryBuilder.append("SELECT count(*) bothVio FROM gen_prefix_validation WHERE irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL AND recv_origin_as != irr_origin_as or recv_origin_as != rpki_origin_as");
+        StringBuilder queryBuilder = new StringBuilder(" SELECT count(*) total FROM gen_prefix_validation ");
+
+        for (int i = 0; i < whereArray.length; i++) {
+            queryBuilder.append(" UNION ALL SELECT count(*) total FROM gen_prefix_validation ");
+            if (whereClause != null && !whereClause.isEmpty())
+                processParas(asn, prefix, whereClause + whereArray[i], queryBuilder);
+            else
+                processParas(asn, prefix, " WHERE " + whereArray[i], queryBuilder);
+        }
 
         String res = DbUtils.select_DbToJson(mysql_ds, queryBuilder.toString());
 

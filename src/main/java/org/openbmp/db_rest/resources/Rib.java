@@ -263,7 +263,7 @@ public class Rib {
             where_str += " and " + where;
 
         return RestResponse.okWithBody(
-                DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+                DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit, where_str, orderby));
     }
 
     @GET
@@ -304,7 +304,7 @@ public class Rib {
 
 
         return RestResponse.okWithBody(
-                DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+                DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit, where_str, orderby));
     }
 
     @GET
@@ -580,16 +580,17 @@ public class Rib {
             else
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval 2 hour)");
             where_str.append(" and LastModified <= current_timestamp ");
-        } else {  // replace default current_timestamp
-            if (timestamp.equals("lastupdate")) {
-                String queryForLastTimestamp = "SELECT timestamp FROM path_attr_log WHERE prefix = '"
-                        + prefix + "' AND prefix_len = " + length + " ORDER BY timestamp DESC LIMIT 1";
-                Map<String,List<DbColumnDef>> lastTimestampMap = DbUtils.select_DbToMap(mysql_ds, queryForLastTimestamp);
-                if (lastTimestampMap.size() > 0)
-                    timestamp = lastTimestampMap.keySet().iterator().next();
-                else
-                    timestamp = new Timestamp(System.currentTimeMillis()).toString();
-            }
+        } else if (timestamp.equals("lastupdate")){  // replace default current_timestamp
+            orderby = "LastModified DESC";
+            limit = 100;
+//            if (timestamp.equals("lastupdate")) {
+//            String queryForLastTimestamp = "SELECT LastModified FROM v_routes_history WHERE " + where_str + " ORDER BY LastModified DESC LIMIT 1";
+//            Map<String,List<DbColumnDef>> lastTimestampMap = DbUtils.select_DbToMap(mysql_ds, queryForLastTimestamp);
+//            if (lastTimestampMap.size() > 0)
+//                timestamp = lastTimestampMap.keySet().iterator().next();
+//            else
+//                timestamp = new Timestamp(System.currentTimeMillis()).toString();
+        } else {
             if (hours != null && hours >= 2)
                 where_str.append(" and LastModified >= date_sub('" + timestamp + "', interval " + hours + " hour)");
             else

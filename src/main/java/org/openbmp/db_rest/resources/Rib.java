@@ -254,16 +254,39 @@ public class Rib {
     @Produces("application/json")
     public Response getRibByPrefix(@PathParam("prefix") String prefix,
                                    @QueryParam("limit") Integer limit,
+                                   @QueryParam("aggregate") String aggregate,
+                                   @QueryParam("distinc") String distinct,
                                    @QueryParam("where") String where,
                                    @QueryParam("orderby") String orderby) {
 
-        String where_str = "Prefix like '" + prefix + "%' ";
+        StringBuilder query = new StringBuilder();
+
+        if (aggregate != null) {
+            String ip_bits = IpAddr.getIpBits(prefix);
+
+            query.append(" prefix_bits IN (");
+            for (int len = ip_bits.length(); len > 0; len--) {
+                query.append("'" + ip_bits.substring(0, len) + "'");
+
+                if (len > 1) {
+                    query.append(',');
+                }
+            }
+
+            query.append(") ");
+        } else {
+            query.append("Prefix like '" + prefix + "%' ");
+        }
+
+        if (distinct != null) {
+            query.append(" GROUP BY prefix, prefixlen");
+        }
 
         if (where != null)
-            where_str += " and " + where;
+            query.append(" and " + where);
 
         return RestResponse.okWithBody(
-                DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit, where_str, orderby));
+                DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit, query.toString(), orderby));
     }
 
     @GET
@@ -291,20 +314,46 @@ public class Rib {
     public Response getRibByPrefixLength(@PathParam("prefix") String prefix,
                                          @PathParam("length") Integer length,
                                          @QueryParam("limit") Integer limit,
+                                         @QueryParam("aggregate") String aggregate,
+                                         @QueryParam("distinct") String distinct,
+                                         @QueryParam("specific") String specific,
                                          @QueryParam("where") String where,
                                          @QueryParam("orderby") String orderby) {
 
         if (length < 1 || length > 128)
             length = 32;
 
-        String where_str = "Prefix = '" + prefix + "' and PrefixLen = " + length;
+        StringBuilder query = new StringBuilder();
+        String ip_bits = IpAddr.getIpBits(prefix);
+
+        if (aggregate != null) {
+            query.append(" prefix_bits IN (");
+            for (int len = ip_bits.length(); len > 0; len--) {
+                query.append("'" + ip_bits.substring(0, len) + "'");
+
+                if (len > 1) {
+                    query.append(',');
+                }
+            }
+            query.append(") ");
+        } else if (specific != null) {
+            query.append(" prefix_bits LIKE '");
+            query.append(ip_bits.substring(0, length));
+            query.append("%'");
+        } else {
+            query.append("Prefix = '" + prefix + "' and PrefixLen = " + length);
+        }
+
+        if (distinct != null) {
+            query.append(" GROUP BY prefix, prefixlen");
+        }
 
         if (where != null)
-            where_str += " and " + where;
+            query.append(" and " + where);
 
 
         return RestResponse.okWithBody(
-                DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit, where_str, orderby));
+                DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit, query.toString(), orderby));
     }
 
     @GET
@@ -338,6 +387,7 @@ public class Rib {
                                    @QueryParam("where") String where,
                                    @QueryParam("aggregates") Boolean agg,
                                    @QueryParam("distinct") Boolean distinct,
+                                   @QueryParam("specific") Boolean specific,
                                    @QueryParam("orderby") String orderby) {
 
         StringBuilder query = new StringBuilder();
@@ -377,11 +427,7 @@ public class Rib {
 
             query = new StringBuilder();
 
-            if (agg == null) {
-                query.append(" prefix = \"" + prefix + "\"");
-                query.append(" AND prefixlen = " + prefix_len);
-
-            } else {
+            if (agg != null) {
                 ip_bits = IpAddr.getIpBits(prefix);
 
                 query.append(" prefix_bits IN (");
@@ -394,6 +440,10 @@ public class Rib {
                 }
 
                 query.append(") ");
+
+            } else {
+                query.append(" prefix = \"" + prefix + "\"");
+                query.append(" AND prefixlen = " + prefix_len);
             }
 
             if (where != null) {
@@ -409,7 +459,7 @@ public class Rib {
             }
 
             return RestResponse.okWithBody(
-                    DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit,
+                    DbUtils.selectStar_DbToJson(mysql_ds, "v_all_routes", limit,
                             query.toString() /* where str without the WHERE statement */, orderby,
                             (System.currentTimeMillis() - startTime)));
 

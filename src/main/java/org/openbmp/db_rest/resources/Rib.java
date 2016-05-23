@@ -22,6 +22,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -133,8 +134,11 @@ public class Rib {
 
         query.append("    r.hash_id as rib_hash_id,\n");
         query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id\n");
-        query.append("    FROM bgp_peers p JOIN rib r force index (idx_origin_as)ON (r.peer_hash_id = p.hash_id)\n");
-        query.append("    JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id)\n");
+        query.append("    FROM bgp_peers p JOIN rib r force index (idx_origin_as) ON (r.peer_hash_id = p.hash_id)\n");
+
+        if (brief == null)
+            query.append("    JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id and path.peer_hash_id = r.peer_hash_id)\n");
+
         query.append("    JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
         query.append("    WHERE r.isWithdrawn = False and r.origin_as = " + asn + "\n");
 
@@ -189,7 +193,7 @@ public class Rib {
         query.append("    r.hash_id as rib_hash_id,\n");
         query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id\n");
         query.append("    FROM bgp_peers p JOIN rib r force index (idx_origin_as)ON (r.peer_hash_id = p.hash_id)\n");
-        query.append("    JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id)\n");
+        query.append("    JOIN path_attrs path ON (path.hash_id = r.path_attr_hash_id and path.peer_hash_id = r.peer_hash_id)\n");
         query.append("    JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
         query.append("    WHERE r.isWithdrawn = False and r.origin_as = " + asn + " and r.peer_hash_id = '" + peerHashId + "'\n");
 
@@ -616,9 +620,100 @@ public class Rib {
 		);
 	}
 
-	/**
-	 * Cleanup
-	 */
+    @GET
+    @Path("/asn/{ASN}/specifics")
+    @Produces("application/json")
+    public Response getRibAsnSpecifics(@PathParam("ASN")BigInteger asn,
+                                       @QueryParam("hours") Integer hours,
+                                       @QueryParam("ts") String timestamp) {
+
+        StringBuilder query = new StringBuilder();
+
+        long startTime = System.currentTimeMillis();
+
+        StringBuilder where_str = new StringBuilder();
+        where_str.append("    WHERE ");
+
+        String tsval = timestamp != null ? "'" + timestamp + "'" : "current_timestamp";
+
+        if (hours != null && hours >= 2)
+            where_str.append(" l.timestamp >= date_sub(" + tsval + ", interval " + hours + " hour)");
+        else
+            where_str.append(" l.timestamp >= date_sub(" + tsval + ", interval 2 hour)");
+
+        where_str.append(" and l.timestamp <= " + tsval + "\n");
+
+
+        /*
+         * Get distinct prefixes for given ASN
+         */
+        query.append("SELECT distinct prefix,prefix_len,Origin_AS,prefix_bits\n");
+        query.append("    FROM rib \n");
+        query.append("    WHERE origin_as = " + asn);
+        query.append("        AND isWithdrawn = False");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        Map<String, List<DbColumnDef>> ResultsMap;
+        ResultsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+
+        System.out.println("Finished query, results " + ResultsMap.size());
+
+
+        /*
+         * Iterate over the list of distinct prefixes and run a check on each
+         */
+        Map<String, List<DbColumnDef>> ResultsMap_specifics;
+        StringBuilder prefix_query = new StringBuilder();
+
+        prefix_query.append(" (");
+
+        for (Map.Entry<String, List<DbColumnDef>> entry : ResultsMap.entrySet()) {
+
+            String prefix = entry.getValue().get(0).getValue();
+            Integer prefix_len = Integer.valueOf(entry.getValue().get(1).getValue());
+            String origin_asn = entry.getValue().get(2).getValue();
+
+            String ip_bits = IpAddr.getIpBits(prefix);
+            ip_bits = ip_bits.substring(0, prefix_len);
+
+            //System.out.printf("entry: %s/%d %s %s\n", prefix, prefix_len, origin_asn, ip_bits);
+
+            if (prefix_query.length() > 2) {
+                prefix_query.append(" OR ");
+            }
+
+            prefix_query.append("r.prefix_bits like '");
+            prefix_query.append(ip_bits);
+            prefix_query.append("%'");
+        }
+
+        prefix_query.append(") ");
+
+        StringBuilder querySpecifics = new StringBuilder();
+        querySpecifics.append("SELECT r.prefix,r.prefix_len, r.origin_as OriginASN,\n");
+        querySpecifics.append("          a.as_path,max(r.timestamp) as LastUpdate\n");
+
+        querySpecifics.append("   FROM rib r \n");
+        querySpecifics.append("         STRAIGHT_JOIN path_attrs a ON (r.path_attr_hash_id = a.hash_id)\n");
+
+        querySpecifics.append("   WHERE ");
+        querySpecifics.append(prefix_query);
+        querySpecifics.append("            AND r.isWithdrawn = False\n");
+        querySpecifics.append("            AND " + tsval + "\n");
+        querySpecifics.append("   GROUP BY r.prefix_bits ORDER BY r.prefix_bin,r.prefix_len");
+
+        System.out.println(" specifics query: " + querySpecifics.toString());
+
+        ResultsMap_specifics = DbUtils.select_DbToMap(mysql_ds, querySpecifics.toString());
+
+        return RestResponse.okWithBody(DbUtils.DbMapToJson("asn_specifics", ResultsMap_specifics, System.currentTimeMillis() - startTime));
+    }
+
+
+    /**
+     * Cleanup
+     */
 	/**
     @PreDestroy
     void destory() {

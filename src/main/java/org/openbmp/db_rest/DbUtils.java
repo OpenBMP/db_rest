@@ -8,7 +8,6 @@
  */
 package org.openbmp.db_rest;
 
-import java.awt.Window.Type;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigInteger;
@@ -18,11 +17,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -231,7 +226,7 @@ public class DbUtils {
 	 */
 	static public Map<String,List<DbColumnDef>> select_DbToMap(DataSource ds, String query) {
 		
-		Map<String,List<DbColumnDef>> results = new HashMap<String,List<DbColumnDef>>();
+		Map<String,List<DbColumnDef>> results = new LinkedHashMap<String,List<DbColumnDef>>();
 
 		//
 		// Run the query
@@ -541,10 +536,10 @@ public class DbUtils {
 			jgen.writeArrayFieldStart("data");
 
 			// Sort the rows map
-			Map<String,List<DbColumnDef>> rows = new TreeMap<String,List<DbColumnDef>>(rowsMap); 
+			//Map<String,List<DbColumnDef>> rows = new TreeMap<String,List<DbColumnDef>>(rowsMap);
 	        
 			// Loop through all rows
-	        for(Map.Entry<String, List<DbColumnDef>> row : rows.entrySet()){
+	        for(Map.Entry<String, List<DbColumnDef>> row : rowsMap.entrySet()){
 	        	//System.out.println("PriKey=" + row.getKey());
 
 	        	// Begin row object
@@ -734,7 +729,7 @@ public class DbUtils {
 	 * 			sum columns. 
 	 */
 	static public Map<String,List<DbColumnDef>> DbResultsToMap(ResultSet db_results, List<Integer> sumColumns) {
-		Map<String,List<DbColumnDef>> rows = new HashMap<String,List<DbColumnDef>>();
+		Map<String,List<DbColumnDef>> rows = new LinkedHashMap<String,List<DbColumnDef>>();
 		
 		try {
 			ResultSetMetaData meta = db_results.getMetaData();

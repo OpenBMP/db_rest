@@ -630,16 +630,6 @@ public class Rib {
             else
                 where_str.append(" and LastModified >= date_sub(current_timestamp, interval 2 hour)");
             where_str.append(" and LastModified <= current_timestamp ");
-        } else if (timestamp.equals("lastupdate")){  // replace default current_timestamp
-            orderby = "LastModified DESC";
-            limit = 100;
-//            if (timestamp.equals("lastupdate")) {
-//            String queryForLastTimestamp = "SELECT LastModified FROM v_routes_history WHERE " + where_str + " ORDER BY LastModified DESC LIMIT 1";
-//            Map<String,List<DbColumnDef>> lastTimestampMap = DbUtils.select_DbToMap(mysql_ds, queryForLastTimestamp);
-//            if (lastTimestampMap.size() > 0)
-//                timestamp = lastTimestampMap.keySet().iterator().next();
-//            else
-//                timestamp = new Timestamp(System.currentTimeMillis()).toString();
         } else {
             if (hours != null && hours >= 2)
                 where_str.append(" and LastModified >= date_sub('" + timestamp + "', interval " + hours + " hour)");
@@ -661,6 +651,36 @@ public class Rib {
 			case WITHDRAWS:
 				tableName = "v_routes_withdraws";
 		}
+
+        // build a new query, based on view, force using index on timestamp
+        if (timestamp.equals("lastupdate")) {
+            StringBuilder lastUpdateQueryBuilder = new StringBuilder();
+            lastUpdateQueryBuilder.append("SELECT rtr.name AS RouterName, rtr.ip_address as RouterAddress,\n");
+            lastUpdateQueryBuilder.append("         log.Prefix,log.PrefixLen,\n");
+            lastUpdateQueryBuilder.append("         path.origin AS Origin,path.origin_as AS Origin_AS,\n");
+            lastUpdateQueryBuilder.append("         path.med AS MED,path.local_pref AS LocalPref,path.next_hop AS NH,\n");
+            lastUpdateQueryBuilder.append("         path.as_path AS AS_Path,path.as_path_count AS ASPath_Count,path.community_list AS Communities,\n");
+            lastUpdateQueryBuilder.append("         path. ext_community_list AS ExtCommunities,\n");
+            lastUpdateQueryBuilder.append("         path.cluster_list AS ClusterList,path.aggregator AS Aggregator,\n");
+            lastUpdateQueryBuilder.append("         p.peer_addr AS PeerAddress,\n");
+            lastUpdateQueryBuilder.append("         p.peer_as AS PeerASN, p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
+            lastUpdateQueryBuilder.append("         log.id,log.timestamp as LastModified,\n");
+            lastUpdateQueryBuilder.append("         log.path_attr_hash_id, log.peer_hash_id,\n");
+            lastUpdateQueryBuilder.append("         rtr.hash_id as router_hash_id\n");
+            lastUpdateQueryBuilder.append("     FROM (SELECT\n");
+            lastUpdateQueryBuilder.append("                prefix as Prefix,prefix_len as PrefixLen,id,timestamp,path_attr_hash_id,peer_hash_id\n");
+            lastUpdateQueryBuilder.append("            FROM path_attr_log use index (idx_ts)\n");  // with index (idx_ts)
+            lastUpdateQueryBuilder.append("          WHERE prefix = '" + prefix);
+            lastUpdateQueryBuilder.append("' AND prefix_len = " + length);
+            lastUpdateQueryBuilder.append("\n       ORDER BY timestamp DESC LIMIT 100\n");
+            lastUpdateQueryBuilder.append("     ) log\n");
+            lastUpdateQueryBuilder.append("     STRAIGHT_JOIN path_attrs path\n");
+            lastUpdateQueryBuilder.append("          ON (log.path_attr_hash_id = path.hash_id AND \n");
+            lastUpdateQueryBuilder.append("            log.peer_hash_id = path.peer_hash_id)\n");
+            lastUpdateQueryBuilder.append("     STRAIGHT_JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
+            lastUpdateQueryBuilder.append("     STRAIGHT_JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
+            return RestResponse.okWithBody(DbUtils.select_DbToJson(mysql_ds, tableName, lastUpdateQueryBuilder.toString()));
+        }
 
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, where_str.toString(), orderby)

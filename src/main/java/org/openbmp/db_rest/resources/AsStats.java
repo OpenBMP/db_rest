@@ -122,7 +122,7 @@ public class AsStats {
 			orderby_str = " ORDER BY transit_v6_prefixes DESC";
 			limit_str = " limit " + topTransit;
 		}
-		
+
 		if (topOrigin != null) {
 			orderby_str = " ORDER BY origin_v6_prefixes DESC";
 			limit_str = " limit " + topOrigin;

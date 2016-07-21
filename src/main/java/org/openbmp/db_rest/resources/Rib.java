@@ -632,11 +632,15 @@ public class Rib {
             lastUpdateQueryBuilder.append("     FROM (SELECT\n");
             lastUpdateQueryBuilder.append("                prefix as Prefix,prefix_len as PrefixLen,id,timestamp,path_attr_hash_id,peer_hash_id\n");
             String tableName = "";
-            if (type.equals(HISTORY_TYPE.UPDATES)) 
-                tableName = "path_attr_log";
-            else 
-                tableName = "withdrawn_log";
-            lastUpdateQueryBuilder.append("            FROM " + tableName + " use index (idx_ts)\n");  // with index (idx_ts)
+
+            if (type.equals(HISTORY_TYPE.UPDATES)) {
+                lastUpdateQueryBuilder.append("            FROM path_attr_log use index (idx_ts)\n");  // with index (idx_ts)
+                tableName = "v_routes_history";
+            } else {
+                tableName = "v_routes_withdraws";
+                lastUpdateQueryBuilder.append("            FROM withdrawn_log use index (idx_ts)\n");  // with index (idx_ts)
+            }
+
             lastUpdateQueryBuilder.append("          WHERE prefix = '" + prefix);
             lastUpdateQueryBuilder.append("' AND prefix_len = " + length);
             if (peerHashId != null) {
@@ -650,6 +654,7 @@ public class Rib {
             lastUpdateQueryBuilder.append("     STRAIGHT_JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
             lastUpdateQueryBuilder.append("     STRAIGHT_JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
             System.out.println(lastUpdateQueryBuilder.toString());
+
             return RestResponse.okWithBody(DbUtils.select_DbToJson(mysql_ds, tableName, lastUpdateQueryBuilder.toString()));
         }
 

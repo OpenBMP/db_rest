@@ -33,7 +33,7 @@ public class Routers {
 
 	/**
 	 * Initialize the class Sets the data source
-	 * 
+	 *
 	 * @throws
 	 */
 	@PostConstruct
@@ -60,6 +60,7 @@ public class Routers {
 						     @QueryParam("orderby") String orderby) {
 		
 		StringBuilder query = new StringBuilder();
+
 		if (withGeo == null) {
 			query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
 			query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");

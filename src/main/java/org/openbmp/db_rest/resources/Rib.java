@@ -129,7 +129,7 @@ public class Rib {
             query.append("    p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
             query.append("    r.hash_id as rib_hash_id,\n");
             query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,\n");
-            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+            query.append("    r.timestamp AS LastModified, r.first_added_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
         }
 
         query.append("    r.hash_id as rib_hash_id,\n");
@@ -187,7 +187,7 @@ public class Rib {
             query.append("    p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,\n");
             query.append("    r.hash_id as rib_hash_id,\n");
             query.append("    r.path_attr_hash_id as path_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,\n");
-            query.append("    r.timestamp AS LastModified, r.db_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
+            query.append("    r.timestamp AS LastModified, r.first_added_timestamp as DBLastModified,r.prefix_bin as prefix_bin,\n");
         }
 
         query.append("    r.hash_id as rib_hash_id,\n");

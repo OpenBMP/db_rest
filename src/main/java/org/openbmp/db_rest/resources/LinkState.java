@@ -185,39 +185,6 @@ public class LinkState {
 					DbUtils.selectStar_DbToJson(mysql_ds, "v_ls_links", limit, where, orderby));
 	}
 
-
-	@GET
-	@Path("/links/epe")
-	@Produces("application/json")
-	public Response getLsLinksEpe(
-			@QueryParam("limit") Integer limit,
-			@QueryParam("where") String where,
-			@QueryParam("orderby") String orderby) {
-
-		StringBuilder query = new StringBuilder();
-
-        query.append("SELECT ln.local_router_id as Local_BGPID, ln.local_asn as Local_ASN,\n");
-        query.append("       ln.remote_router_id as Remote_BGPID, ln.remote_asn as Remote_ASN,\n");
-        query.append("       ln.interface_addr as Local_IP, ln.neighbor_addr as Remote_IP,\n");
-        query.append("       ln.peer_node_sid as Peer_Node_SID,if(ln.isWithdrawn, 'Withdrawn', 'Active') as State,\n");
-        query.append("       ln.path_attr_hash_id as path_attr_hash_id, ln.peer_hash_id as peer_hash_id\n");
-        query.append("   FROM ls_links ln\n");
-        query.append("   WHERE protocol = 'EPE'\n");
-
-
-        if (where != null) {
-            query.append(" AND ");
-            query.append(where);
-        }
-
-
-        System.out.print("QUERY=" + query.toString());
-
-        return RestResponse.okWithBody(
-				DbUtils.select_DbToJson(mysql_ds, "ls_links_epe", query.toString()));
-	}
-
-
 	@GET
 	@Path("/links/peer/{peerHashId}")
 	@Produces("application/json")

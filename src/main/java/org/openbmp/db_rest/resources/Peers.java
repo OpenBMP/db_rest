@@ -8,13 +8,10 @@
  */
 package org.openbmp.db_rest.resources;
 
-import java.io.IOException;
-import java.io.StringWriter;
+
 import java.math.BigInteger;
-import java.sql.Types;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import javax.annotation.PostConstruct;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -29,10 +26,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonGenerator;
-import org.openbmp.db_rest.DbColumnDef;
 import org.openbmp.db_rest.RestResponse;
 import org.openbmp.db_rest.DbUtils;
 
@@ -370,6 +363,53 @@ public class Peers {
 		return RestResponse.okWithBody(
 				DbUtils.selectStar_DbToJson(mysql_ds, tableName, 
 						limit, "peer_hash_id like '" + peerHashId + "'", orderBy));
+	}
+
+	@GET
+	@Path("/events/down")
+	@Produces("application/json")
+	public Response getPeerDownEvents(@QueryParam("peerHashId") String peerHashId,
+									  @QueryParam("limit") Integer limit,
+									  @QueryParam("ts") String timestamp,
+									  @QueryParam("id") BigInteger id,
+									  @QueryParam("orderBy") String orderBy) {
+		String tableName = "peer_down_events";
+		StringBuilder whereBuilder = new StringBuilder();
+
+		if (limit == null) {
+			limit = 1000;
+		}
+
+		List<String> paramList = new ArrayList<String>();
+
+		if (peerHashId != null) {
+			paramList.add(" peer_hash_id = '" + peerHashId + "'");
+ 		}
+
+ 		if (timestamp != null) {
+ 			paramList.add(" timestamp >= " + timestamp);
+ 		}
+
+		if (id != null) {
+			paramList.add(" id >= " + id);
+		}
+
+		for (int i = 0; i < paramList.size() - 1; i++) {
+			whereBuilder.append(paramList.get(i));
+			whereBuilder.append(" AND ");
+		}
+
+		if (paramList.size() >= 1) {
+			whereBuilder.append(paramList.get(paramList.size() - 1));
+			return RestResponse.okWithBody(
+					DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, whereBuilder.toString(), orderBy)
+			);
+		}
+		else {
+			return RestResponse.okWithBody(
+					DbUtils.selectStar_DbToJson(mysql_ds, tableName, limit, null, orderBy)
+			);
+		}
 	}
 	
 }

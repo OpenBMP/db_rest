@@ -116,7 +116,7 @@ public class LinkStateEpe {
             /*
 		     * Stage 1b: Get the prefix/len originating router bgp_id, labels, and peer address
 		     */
-            results = queryOriginatingPeer(prefix, prefix_len, true);
+            results = queryOriginatingPeer(prefix, prefix_len, true, false);
 
             if (results == null) {
                 return RestResponse.okWithBody("{ \"error\": \"Cannot find prefix\" }");
@@ -142,7 +142,7 @@ public class LinkStateEpe {
                     /*
                      * Stage 3: Get the BGP-ID label for the router (ToR) by looking up the BGP-ID of the router
                      */
-                    results = queryOriginatingPeer(router_bgp_id, (router_bgp_id.contains(":") ? 128 : 32), true);
+                    results = queryOriginatingPeer(router_bgp_id, (router_bgp_id.contains(":") ? 128 : 32), false, true);
 
                     if (results == null) {
                         return RestResponse.okWithBody("{ \"error\": \"Cannot find router bgp-id prefix\" }");
@@ -232,11 +232,12 @@ public class LinkStateEpe {
      * @param prefix                Prefix to find
      * @param prefix_len            Prefix length to find
      * @param eBGPOnly              If true, only eBGP peers will be considered
+     * @param excludeLabel3         True to exclude anything with label value of 3
      *
      * @return Null if no matches, otherwise map of resutls
      */
     public Map<String, String> queryOriginatingPeer(String prefix, Integer prefix_len,
-                                                    boolean eBGPOnly) {
+                                                    boolean eBGPOnly, boolean excludeLabel3) {
 
         StringBuilder query = new StringBuilder();
 
@@ -253,6 +254,10 @@ public class LinkStateEpe {
         query.append("     WHERE prefix = \"" + prefix + "\"");
         query.append("           AND prefix_len = " + prefix_len);
         query.append("           AND isWithdrawn = False\n");               // only active prefixes
+
+        if (excludeLabel3) {
+            query.append("           AND labels != '3'\n");                // exclude a label value of 3
+        }
 
         if (eBGPOnly) {
             query.append("           AND p.peer_as != p.local_asn\n");          // only eBGP

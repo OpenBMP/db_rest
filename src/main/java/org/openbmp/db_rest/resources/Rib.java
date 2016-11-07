@@ -258,7 +258,7 @@ public class Rib {
     @Produces("application/json")
     public Response getRibByPrefix(@PathParam("prefix") String prefix,
                                    @QueryParam("limit") Integer limit,
-                                   @QueryParam("aggregate") String aggregate,
+                                   @QueryParam("aggregates") String aggregate,
                                    @QueryParam("distinc") String distinct,
                                    @QueryParam("where") String where,
                                    @QueryParam("orderby") String orderby) {
@@ -318,7 +318,7 @@ public class Rib {
     public Response getRibByPrefixLength(@PathParam("prefix") String prefix,
                                          @PathParam("length") Integer length,
                                          @QueryParam("limit") Integer limit,
-                                         @QueryParam("aggregate") String aggregate,
+                                         @QueryParam("aggregates") String aggregate,
                                          @QueryParam("distinct") String distinct,
                                          @QueryParam("specific") String specific,
                                          @QueryParam("where") String where,

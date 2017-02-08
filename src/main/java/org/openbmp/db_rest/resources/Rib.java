@@ -632,21 +632,28 @@ public class Rib {
             lastUpdateQueryBuilder.append("     FROM (SELECT\n");
             lastUpdateQueryBuilder.append("                prefix as Prefix,prefix_len as PrefixLen,id,timestamp,path_attr_hash_id,peer_hash_id\n");
             String tableName = "";
+            int currentLimit = 1000;
+            if (limit != null) {
+                currentLimit = limit;
+            }
 
             if (type.equals(HISTORY_TYPE.UPDATES)) {
-                lastUpdateQueryBuilder.append("            FROM path_attr_log use index (idx_ts)\n");  // with index (idx_ts)
+                lastUpdateQueryBuilder.append("            FROM path_attr_log\n");  // with index (idx_ts)
                 tableName = "v_routes_history";
             } else {
                 tableName = "v_routes_withdraws";
-                lastUpdateQueryBuilder.append("            FROM withdrawn_log use index (idx_ts)\n");  // with index (idx_ts)
+                lastUpdateQueryBuilder.append("            FROM withdrawn_log\n");  // with index (idx_ts)
             }
 
-            lastUpdateQueryBuilder.append("          WHERE prefix = '" + prefix);
+            lastUpdateQueryBuilder.append("  USE INDEX (idx_ts) WHERE prefix = '" + prefix);
             lastUpdateQueryBuilder.append("' AND prefix_len = " + length);
             if (peerHashId != null) {
                 lastUpdateQueryBuilder.append(" AND peer_hash_id = '" + peerHashId + "' \n");
             }
-            lastUpdateQueryBuilder.append("\n       ORDER BY timestamp DESC LIMIT 100\n");
+            if (where != null) {
+                lastUpdateQueryBuilder.append(" AND " + where );
+            }
+            lastUpdateQueryBuilder.append("\n   ORDER BY timestamp DESC LIMIT " + currentLimit + "\n");
             lastUpdateQueryBuilder.append("     ) log\n");
             lastUpdateQueryBuilder.append("     STRAIGHT_JOIN path_attrs path\n");
             lastUpdateQueryBuilder.append("          ON (log.path_attr_hash_id = path.hash_id AND \n");
@@ -655,6 +662,7 @@ public class Rib {
             lastUpdateQueryBuilder.append("     STRAIGHT_JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)\n");
             System.out.println(lastUpdateQueryBuilder.toString());
 
+            //return RestResponse.okWithBody(lastUpdateQueryBuilder.toString());
             return RestResponse.okWithBody(DbUtils.select_DbToJson(mysql_ds, tableName, lastUpdateQueryBuilder.toString()));
         }
 

@@ -58,60 +58,60 @@ public class Routers {
 							 @QueryParam("withgeo") Boolean withGeo,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
-		
+
 		StringBuilder query = new StringBuilder();
 
 		if (withGeo == null) {
 			query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
 			query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
 			query.append("           term_reason_text as LastTermReason, init_data as InitData,\n");
-			query.append("           timestamp as LastModified\n");
+			query.append("           timestamp as LastModified, hash_id as RouterHashId\n");
 			query.append("    FROM routers\n");
-		
+
 		} else {
 			query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
 			query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
 			query.append("           term_reason_text as LastTermReason, init_data as InitData,\n");
-			query.append("           timestamp as LastModified, v_geo_ip.*\n");
+			query.append("           timestamp as LastModified, hash_id as RouterHashId, v_geo_ip.*\n");
 			query.append("    FROM routers LEFT JOIN v_geo_ip ON (v_geo_ip.ip_start_bin = routers.geo_ip_start)");
 		}
 
 		String limit_st = " limit 1000";
 		String where_st = "";
 		String orderby_st = "";
-		
-		// Set the limit for the query 
+
+		// Set the limit for the query
 		if (limit != null && limit < 40000)
 			limit_st = " limit " + limit;
-		
+
 		if (where != null)
 			where_st = " WHERE " + where;
-		
+
 		if (orderby != null)
 			orderby_st = " ORDER BY " + orderby;
 
 		query.append(where_st);
 		query.append(orderby_st);
 		query.append(limit_st);
-		
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
-	
-	
+
+
 	@GET
 	@Path("/status/count")
 	@Produces("application/json")
 	public Response getRoutersStatusCount() {
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT if(isConnected, 'UP', 'DOWN') as StatusType,\n");
 		query.append("           count(hash_id) as Count\n");
 		query.append("    FROM routers GROUP BY StatusType\n");
-		
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
@@ -122,33 +122,33 @@ public class Routers {
 	public Response getRoutersStatusUp(@QueryParam("limit") Integer limit,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
 		query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
 		query.append("           term_reason_text as LastTermReason, init_data as InitData\n");
 		query.append("    FROM routers\n");
-		
+
 		String limit_st = " limit 1000";
 		String where_st = " WHERE isConnected = 1";
 		String orderby_st = "";
-		
-		// Set the limit for the query 
+
+		// Set the limit for the query
 		if (limit != null && limit < 40000)
 			limit_st = " limit " + limit;
-		
+
 		if (where != null)
 			where_st += where;
-		
+
 		if (orderby != null)
 			orderby_st = " ORDER BY " + orderby;
 
 		query.append(where_st);
 		query.append(orderby_st);
 		query.append(limit_st);
-		
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}
@@ -160,33 +160,33 @@ public class Routers {
 	public Response getRoutersStatusDown(@QueryParam("limit") Integer limit,
 						     @QueryParam("where") String where,
 						     @QueryParam("orderby") String orderby) {
-		
+
 		StringBuilder query = new StringBuilder();
 		query.append("select name as RouterName, ip_address as RouterIP, router_AS as RouterAS, description,\n");
 		query.append("           isConnected, isPassive, term_reason_code as LastTermCode,\n");
 		query.append("           term_reason_text as LastTermReason, init_data as InitData\n");
 		query.append("    FROM routers\n");
-		
+
 		String limit_st = " limit 1000";
 		String where_st = " WHERE isConnected = 0";
 		String orderby_st = "";
-		
-		// Set the limit for the query 
+
+		// Set the limit for the query
 		if (limit != null && limit < 40000)
 			limit_st = " limit " + limit;
-		
+
 		if (where != null)
 			where_st += where;
-		
+
 		if (orderby != null)
 			orderby_st = " ORDER BY " + orderby;
 
 		query.append(where_st);
 		query.append(orderby_st);
 		query.append(limit_st);
-		
+
 		System.out.println("QUERY: \n" + query.toString() + "\n");
-		
+
 		return RestResponse.okWithBody(
 					DbUtils.select_DbToJson(mysql_ds, query.toString()));
 	}

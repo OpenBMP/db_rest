@@ -2,12 +2,12 @@
 <Context>
 	<Resource name="jdbc/MySQLDB" auth="Container" type="javax.sql.DataSource"
 		maxTotal="60" minIdle="0" maxIdle="10"
-		validationQuery="SELECT 1" testOnBorrow="true" testWhileIdle="true" 
+		validationQuery="SELECT 1" testOnBorrow="true" testWhileIdle="true"
 		timeBetweenEvictionRunsMillis="1000" minEvictableIdleTimeMillis="60000"
-		logAbandoned="true" 
-		username="openbmp" password="openbmp" url="jdbc:mysql://10.200.96.146:3306/openBMP"
+		logAbandoned="true"
+		username="openbmp" password="openbmpNow" url="jdbc:mariadb://demo-int.openbmp.org:3306/openBMP"
 		driverClassName="org.mariadb.jdbc.Driver"
 		factory="org.apache.tomcat.jdbc.pool.DataSourceFactory" />
 		<!--  factory="org.apache.tomcat.dbcp.dbcp.BasicDataSourceFactory"  /> -->
-	
+
 </Context>

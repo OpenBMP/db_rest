@@ -96,7 +96,7 @@ public class DbUtils {
 		System.out.println("QUERY: " + select_query);
 
 		// Run the query
-		output = select_DbToJson(ds, null, select_query, extraTimeInMs);
+		output = select_DbToJson(ds, tableName, select_query, extraTimeInMs);
 
 		return output;
 	}

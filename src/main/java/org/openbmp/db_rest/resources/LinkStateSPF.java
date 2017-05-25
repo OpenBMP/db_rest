@@ -120,7 +120,7 @@ public class LinkStateSPF {
 			query.append("                                 AND not l.neighbor_addr = '0.0.0.0')\n");
 			query.append("    WHERE best = TRUE ");
 			query.append(where);
-			query.append("    GROUP BY igp_ospf.prefix,igp_ospf.prefix_len,l.neighbor_addr\n");
+			query.append("    GROUP BY igp_ospf.prefix,igp_ospf.prefix_len,l.neighbor_addr, igp_ospf.path_hash_ids\n");
 			query.append(orderby);
 			query.append(limit_str);
 		

@@ -76,6 +76,7 @@ public class Security {
                                        @QueryParam("where") String whereClause) {
         StringBuilder queryBuilder = new StringBuilder();
         queryBuilder.append("SELECT count(*) as total FROM gen_prefix_validation ");
+        whereClause = whereClause == null ? " WHERE inet6_ntoa(prefix) IS NOT NULL " : whereClause + " AND inet6_ntoa(prefix) IS NOT NULL ";
         processParas(asn, prefix, whereClause, queryBuilder);
         String res = DbUtils.select_DbToJson(mysql_ds, null, queryBuilder.toString());
         return RestResponse.okWithBody(res);
@@ -94,14 +95,15 @@ public class Security {
     @Path("/{page}/{limit}")
     @Produces("application/json")
     public Response getValidationPrefix(@PathParam("page") int page,
-                                      @PathParam("limit") int limit,
-                                      @QueryParam("where") String whereClause,
-                                      @QueryParam("sort") String sort,
-                                      @QueryParam("desc") Boolean desc,
-                                      @QueryParam("asn") int asn,
-                                      @QueryParam("prefix") String prefix) {
+                                        @PathParam("limit") int limit,
+                                        @QueryParam("where") String whereClause,
+                                        @QueryParam("sort") String sort,
+                                        @QueryParam("desc") Boolean desc,
+                                        @QueryParam("asn") int asn,
+                                        @QueryParam("prefix") String prefix) {
         StringBuilder queryBuilder = new StringBuilder();
         queryBuilder.append("SELECT inet6_ntoa(prefix) AS prefix, prefix_len, recv_origin_as, rpki_origin_as, irr_origin_as, irr_source, timestamp FROM gen_prefix_validation ");
+        whereClause = whereClause == null ? " WHERE inet6_ntoa(prefix) IS NOT NULL " : whereClause + " AND inet6_ntoa(prefix) IS NOT NULL ";
         processParas(asn, prefix, whereClause, queryBuilder);
         if (sort != null)
             queryBuilder.append(" ORDER BY " + sort);
@@ -129,14 +131,14 @@ public class Security {
                 " irr_origin_as IS NOT NULL and rpki_origin_as IS NOT NULL AND recv_origin_as != irr_origin_as or recv_origin_as != rpki_origin_as ",
         };
 
-        StringBuilder queryBuilder = new StringBuilder(" SELECT count(*) total FROM gen_prefix_validation ");
+        StringBuilder queryBuilder = new StringBuilder(" SELECT count(*) total FROM gen_prefix_validation WHERE inet6_ntoa(prefix) IS NOT NULL ");
 
         for (int i = 0; i < whereArray.length; i++) {
             queryBuilder.append(" UNION ALL SELECT count(*) total FROM gen_prefix_validation ");
             if (whereClause != null && !whereClause.isEmpty())
-                processParas(asn, prefix, whereClause + whereArray[i], queryBuilder);
+                processParas(asn, prefix, whereClause + whereArray[i] + " AND inet6_ntoa(prefix) IS NOT NULL ", queryBuilder);
             else
-                processParas(asn, prefix, " WHERE " + whereArray[i], queryBuilder);
+                processParas(asn, prefix, " WHERE " + whereArray[i] + " AND inet6_ntoa(prefix) IS NOT NULL ", queryBuilder);
         }
 
         String res = DbUtils.select_DbToJson(mysql_ds, queryBuilder.toString());

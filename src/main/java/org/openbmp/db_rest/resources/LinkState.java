@@ -145,6 +145,37 @@ public class LinkState {
                 DbUtils.select_DbToJson(mysql_ds, query));
     }
 
+	@GET
+	@Path("/nodes/virtual_nodes/peer/{peerHashId}/{mt_id}")
+	@Produces("application/json")
+	public Response getLsNodesByPeer(@PathParam("peerHashId") String peerHashId,
+									 @PathParam("mt_id") Long mt_id) {
+
+		String where = "";
+
+		if (peerHashId != null)
+			where = " and `ls_nodes`.`peer_hash_id` = '" + peerHashId + "' AND `links`.`mt_id` = " + mt_id;
+
+		String query = "select `r`.`name` AS `RouterName`,`r`.`ip_address` AS `RouterIP`,`p`.`name` AS `PeerName`,`p`.`peer_addr` " +
+				"AS `PeerIP`,`ls_nodes`.`igp_router_id` AS `IGP_RouterId`,`ls_nodes`.`name` AS `NodeName`,if((`ls_nodes`.`protocol`" +
+				" like 'OSPF%'),`ls_nodes`.`igp_router_id`,`ls_nodes`.`router_id`) AS `RouterId`,`ls_nodes`.`id` AS `id`," +
+				"`ls_nodes`.`bgp_ls_id` AS `bgpls_id`,`ls_nodes`.`ospf_area_id` AS `OspfAreaId`,`ls_nodes`.`isis_area_id` AS" +
+				" `ISISAreaId`,`ls_nodes`.`protocol` AS `protocol`,`ls_nodes`.`flags` AS `flags`,`ls_nodes`.`timestamp` AS " +
+				"`timestamp`,`ls_nodes`.`asn` AS `asn`,`path_attrs`.`as_path` AS `AS_Path`,`path_attrs`.`local_pref` AS " +
+				"`LocalPref`,`path_attrs`.`med` AS `MED`,`path_attrs`.`next_hop` AS `NH`,`links`.`mt_id` AS `mt_id`," +
+				"`ls_nodes`.`sr_capabilities` AS `sr_capabilities`,`ls_nodes`.`hash_id` AS `hash_id`,`ls_nodes`.`path_attr_hash_id`" +
+				" AS `path_attr_hash_id`,`ls_nodes`.`peer_hash_id` AS `peer_hash_id`,`r`.`hash_id` AS `router_hash_id`, v_geo_ip.* " +
+				"from ((((`ls_nodes` left join `path_attrs` on(((`ls_nodes`.`path_attr_hash_id` = `path_attrs`.`hash_id`) and" +
+				" (`ls_nodes`.`peer_hash_id` = `path_attrs`.`peer_hash_id`)))) join `ls_links` `links` " +
+				"on(((`ls_nodes`.`hash_id` = `links`.`local_node_hash_id`) and (`links`.`isWithdrawn` = 0)))) join " +
+				"`bgp_peers` `p` on((`p`.`hash_id` = `ls_nodes`.`peer_hash_id`))) join `routers` `r` " +
+				"on((`p`.`router_hash_id` = `r`.`hash_id`))) LEFT JOIN v_geo_ip ON (v_geo_ip.ip_start_bin = inet6_aton(`ls_nodes`.`router_id`)) " +
+				"where (`ls_nodes`.`igp_router_id` like '%[%]%')" + where + " group by `ls_nodes`.`hash_id`,`links`.`mt_id`";
+
+		return RestResponse.okWithBody(
+				DbUtils.select_DbToJson(mysql_ds, "virtual_nodes", query));
+	}
+
     /*** not used
     @GET
 	@Path("/nodes/peer/{peerHashId}/{nodeHashId}")

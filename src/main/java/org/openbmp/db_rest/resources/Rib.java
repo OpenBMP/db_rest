@@ -645,7 +645,7 @@ public class Rib {
                 lastUpdateQueryBuilder.append("            FROM withdrawn_log\n");  // with index (idx_ts)
             }
 
-            lastUpdateQueryBuilder.append("  USE INDEX (idx_ts) WHERE prefix = '" + prefix);
+            lastUpdateQueryBuilder.append("  WHERE prefix = '" + prefix);
             lastUpdateQueryBuilder.append("' AND prefix_len = " + length);
             if (peerHashId != null) {
                 lastUpdateQueryBuilder.append(" AND peer_hash_id = '" + peerHashId + "' \n");

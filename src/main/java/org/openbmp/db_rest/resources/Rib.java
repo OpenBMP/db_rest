@@ -252,6 +252,34 @@ public class Rib {
                 DbUtils.select_DbToJson(mysql_ds, query.toString()));
     }
 
+    @GET
+    @Path("/prefix/suggestion/{prefix}/{prefix_len}")
+    @Produces("application/json")
+    public Response getRibPrefixSuggestions(@PathParam("prefix") String prefix,
+                                            @PathParam("prefix_len") Integer prefix_len,
+                                            @QueryParam("limit") Integer limit) {
+
+        StringBuilder query = new StringBuilder();
+
+        query.append("SELECT DISTINCT CONCAT(prefix,'/',prefix_len) as complete_prefix FROM rib ");
+
+        query.append(" WHERE prefix LIKE '" + prefix + "%' ");
+
+        if(prefix_len != -1)
+            query.append(" AND prefix_len = " + prefix_len);
+        else
+            query.append(" ORDER BY prefix_len ");
+
+        // Limit the number of results.
+        if (limit != null)
+            query.append(" LIMIT " + limit);
+        else
+            query.append(" LIMIT 10");
+
+        return RestResponse.okWithBody(
+                DbUtils.select_DbToJson(mysql_ds, "v_all_routes", query.toString()));
+    }
+
 
     @GET
     @Path("/prefix/{prefix}")

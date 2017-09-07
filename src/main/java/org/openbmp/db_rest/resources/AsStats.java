@@ -119,17 +119,17 @@ public class AsStats {
 			limit_str += " limit " + limit;
 		
 		if (topTransit != null) {
-			orderby_str = " ORDER BY transit_v6_prefixes DESC";
+			orderby_str = " ORDER BY max(transit_v6_prefixes) DESC";
 			limit_str = " limit " + topTransit;
 		}
 
 		if (topOrigin != null) {
-			orderby_str = " ORDER BY origin_v6_prefixes DESC";
+			orderby_str = " ORDER BY max(origin_v6_prefixes) DESC";
 			limit_str = " limit " + topOrigin;
 		}
 		
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT s.asn,transit_v6_prefixes,origin_v6_prefixes,\n");
+		query.append("SELECT s.asn,max(transit_v6_prefixes) as transit_v6_prefixes,max(origin_v6_prefixes) as origin_v6_prefixes,\n");
 		query.append("                as_name,country,org_name,max(s.timestamp) as timestamp \n");
 		query.append("    FROM gen_asn_stats s left join gen_whois_asn w on (s.asn = w.asn)\n");
 		query.append("    WHERE transit_v6_prefixes > 0 or origin_v6_prefixes > 0");
@@ -162,17 +162,17 @@ public class AsStats {
 			limit_str += " limit " + limit;
 		
 		if (topTransit != null) {
-			orderby_str = " ORDER BY transit_v4_prefixes DESC";
+			orderby_str = " ORDER BY max(transit_v4_prefixes) DESC";
 			limit_str = " limit " + topTransit;
 		}
 		
 		if (topOrigin != null) {
-			orderby_str = " ORDER BY origin_v4_prefixes DESC";
+			orderby_str = " ORDER BY max(origin_v4_prefixes) DESC";
 			limit_str = " limit " + topOrigin;
 		}
 			
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT s.asn,transit_v4_prefixes,origin_v4_prefixes,\n");
+		query.append("SELECT s.asn,max(transit_v4_prefixes) as transit_v4_prefixes,max(origin_v4_prefixes) as origin_v4_prefixes,\n");
 		query.append("                as_name,country,org_name,max(s.timestamp) as timestamp \n");
 		query.append("    FROM gen_asn_stats s left join gen_whois_asn w on (s.asn = w.asn)\n");
 		query.append("    WHERE transit_v4_prefixes > 0 or origin_v4_prefixes > 0");

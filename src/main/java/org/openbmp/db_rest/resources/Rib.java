@@ -666,11 +666,11 @@ public class Rib {
             }
 
             if (type.equals(HISTORY_TYPE.UPDATES)) {
-                lastUpdateQueryBuilder.append("            FROM path_attr_log USE INDEX (idx_ts, idx_prefix_full, idx_peer_hash_id) \n");  // with index (idx_ts)
+                lastUpdateQueryBuilder.append("            FROM path_attr_log \n");  // with index (idx_ts)
                 tableName = "v_routes_history";
             } else {
                 tableName = "v_routes_withdraws";
-                lastUpdateQueryBuilder.append("            FROM withdrawn_log USE INDEX (idx_ts, idx_prefix, idx_peer_hash_id) \n");  // with index (idx_ts)
+                lastUpdateQueryBuilder.append("            FROM withdrawn_log \n");  // with index (idx_ts)
             }
 
             lastUpdateQueryBuilder.append("  WHERE prefix = '" + prefix);

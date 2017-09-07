@@ -77,25 +77,30 @@ public class Updates {
                                   @QueryParam("startTs") String startTimestamp,
                                   @QueryParam("endTs") String endTimestamp) {
 
-        if (searchPeer!=null && searchPeer.equals("null"))
+        boolean byPrefix = false;
+
+        if (searchPeer != null && searchPeer.equals("null"))
             searchPeer = null;
-        if (searchPrefix!=null && searchPrefix.equals("null"))
+        if (searchPrefix != null && searchPrefix.equals("null"))
             searchPrefix = null;
-        if (startTimestamp!=null && startTimestamp.equals("null"))
+        if (startTimestamp != null && startTimestamp.equals("null"))
             startTimestamp = null;
-        if (endTimestamp!=null && endTimestamp.equals("null"))
+        if (endTimestamp != null && endTimestamp.equals("null"))
             endTimestamp = null;
 
-		if (joinWhoisPrefix == null)
-			joinWhoisPrefix = Boolean.FALSE;
+        if (joinWhoisPrefix == null)
+            joinWhoisPrefix = Boolean.FALSE;
 
-        if ((groupBy == null || groupBy.isEmpty())||(groupBy!=null && groupBy.equals("null")))
+        if ((groupBy == null || groupBy.isEmpty()) || (groupBy != null && groupBy.equals("null")))
             groupBy = "peer";
 
-		if (groupBy.toLowerCase().equals("peer"))
-			groupBy = "peer_hash_id";
-		else if (groupBy.toLowerCase().equals("prefix"))
-			groupBy = "prefix,prefix_len";
+        if (groupBy.toLowerCase().equals("peer")) {
+            groupBy = "peer_hash_id";
+            byPrefix = false;
+        } else if (groupBy.toLowerCase().equals("prefix")) {
+            groupBy = "prefix,prefixlen";
+            byPrefix = true;
+        }
 
         if (limit == null || limit > 100 || limit < 1)
             limit = 20;
@@ -111,37 +116,74 @@ public class Updates {
 
         StringBuilder query = new StringBuilder();
 
-		query.append("      SELECT l.Prefix,l.PrefixLen,p.name as PeerName,p.peer_addr as PeerAddr,l.Count,l.peer_hash_id,\n");
-		query.append("      r.name as RouterName, r.ip_address as RouterAddr, c.name as CollectorName, c.ip_address as CollectorAddr, c.admin_id as CollectorAdminID\n");
+        query.append("SELECT ");
+
+        if (byPrefix == true) {
+            query.append(" log.Prefix,log.prefixlen as PrefixLen,p.name as PeerName,p.peer_addr as PeerAddr,log.count as Count,\n");
+
+        } else {
+            query.append(" p.name as PeerName,p.peer_addr as PeerAddr,cast(sum(updates) as unsigned) as Count,\n");
+        }
+        query.append("        log.peer_hash_id,r.name as RouterName, r.ip_address as RouterAddr, c.name as CollectorName,\n");
+        query.append("        c.ip_address as CollectorAddr, c.admin_id as CollectorAdminID\n");
+
 		if(joinWhoisPrefix){
-			query.append("      ,pfx.descr as PrefixDescr, pfx.origin_as as OriginAS\n");
+			query.append("  ,pfx.descr as PrefixDescr, pfx.origin_as as OriginAS\n");
 		}
-		query.append("      FROM (SELECT prefix as Prefix,prefix_len as PrefixLen, count(*) as Count, peer_hash_id\n");
-		query.append("      FROM path_attr_log log\n");
-		query.append("      WHERE log.timestamp >= "+startTimestamp +" AND log.timestamp <= " + endTimestamp + "\n");
-		if(searchPeer!=null && !searchPeer.isEmpty()) {
-			query.append("                     AND (log.peer_hash_id = \"" + searchPeer + "\")\n");
-		}
-		if(searchPrefix!=null && !searchPrefix.isEmpty()) {
-			String[] prefix = searchPrefix.split("/");
-			query.append("                     AND (log.prefix = \"" + prefix[0] + "\")\n");
-			query.append("                     AND (log.prefix_len = " + prefix[1] + ")\n");
-		}
-		query.append("      GROUP BY " + groupBy+"\n");
-		query.append("      ORDER BY Count desc) l\n");
-		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
-		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
-		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
+
+		query.append("  FROM ");
+
+        if (byPrefix == true) {
+            query.append("  (SELECT prefix,prefix_len as PrefixLen,cast(sum(updates) as unsigned) as count,peer_hash_id,interval_time\n");
+            query.append("       FROM gen_chg_stats_byprefix\n");
+            query.append("       WHERE interval_time >= "+startTimestamp +" AND interval_time <= " + endTimestamp + "\n");
+//            query.append("  (SELECT prefix,prefix_len as PrefixLen,count(peer_hash_id) as count,peer_hash_id,timestamp as interval_time\n");
+//            query.append("       FROM path_attr_log\n");
+//            query.append("       WHERE timestamp >= "+startTimestamp +" AND timestamp <= " + endTimestamp + "\n");
+
+            if(searchPrefix!=null && searchPrefix.length() > 0) {
+                String[] prefix = searchPrefix.split("/");
+                query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
+                query.append("                     AND (prefix_len = " + prefix[1] + ")\n");
+            }
+
+            if(searchPeer!=null && searchPeer.length() > 0) {
+                query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
+            }
+
+            query.append("       GROUP BY " + groupBy + "\n");
+            query.append("       ORDER BY count desc\n");
+            query.append("       LIMIT " + limit);
+            query.append("   ) log\n");
+
+        } else {
+            query.append(" gen_chg_stats_bypeer log\n");
+        }
+
+
+		query.append("     STRAIGHT_JOIN bgp_peers p ON (log.peer_hash_id = p.hash_id)\n");
+		query.append("     STRAIGHT_JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
+		query.append("     STRAIGHT_JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
 		if(joinWhoisPrefix){
-			query.append("      LEFT JOIN gen_whois_route pfx ON (inet6_aton(l.Prefix) = pfx.prefix AND l.PrefixLen = pfx.prefix_len)\n");
+			query.append("     LEFT JOIN gen_whois_route pfx ON (inet6_aton(log.Prefix) = pfx.prefix AND log.prefixlen = pfx.prefix_len)\n");
 		}
-		query.append("      ORDER BY Count desc\n");
-		query.append("      LIMIT " + limit + "\n");
+
+		if (byPrefix == false) {
+            query.append("  WHERE log.interval_time >= " + startTimestamp + " AND log.interval_time <= " + endTimestamp + "\n");
+
+            if (searchPeer != null && !searchPeer.isEmpty()) {
+                query.append("                     AND (log.peer_hash_id = \"" + searchPeer + "\")\n");
+            }
+        }
+
+        query.append("  GROUP BY " + groupBy+"\n");
+        query.append("  ORDER BY Count desc\n");
+		query.append("  LIMIT " + limit + "\n");
 
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 
         return RestResponse.okWithBody(
-                DbUtils.select_DbToJson(mysql_ds, query.toString()));
+                DbUtils.select_DbToJson(mysql_ds, "l", query.toString()));
     }
 	
 	@GET
@@ -316,24 +358,36 @@ public class Updates {
 			startTimestamp="'" + startTimestamp + "'";
 
         StringBuilder query = new StringBuilder();
-        query.append("SELECT from_unixtime(unix_timestamp(l.timestamp) - unix_timestamp(l.timestamp) % "
-                + interval + ") as IntervalTime,\n");
-        query.append("               count(*) as Count\n");
-        query.append("      FROM path_attr_log l\n");
-//		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
-//		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
-//		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
-		query.append("      WHERE l.timestamp >= "+startTimestamp +" AND l.timestamp <= " + endTimestamp + "\n");
-        if(searchPeer!=null && !searchPeer.isEmpty()) {
-            query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
-        }
-        if(searchPrefix!=null && !searchPrefix.isEmpty()) {
-            String[] prefix = searchPrefix.split("/");
-            query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
-            query.append("                     AND (prefix_len = " + prefix[1] + ")\n");
-        }
-        query.append("      GROUP BY IntervalTime\n");
-        query.append("      ORDER BY l.timestamp");
+        if (searchPeer == null && searchPrefix == null) {
+        	// Use aggregated stats for large query
+			query.append("SELECT from_unixtime(unix_timestamp(interval_time) - unix_timestamp(interval_time) % "
+							+ interval + ") as IntervalTime,\n");
+			query.append("               cast(sum(updates) as unsigned) as Count\n");
+			query.append("      FROM gen_chg_stats_bypeer\n");
+            query.append("      WHERE interval_time >= " + startTimestamp +
+                         " AND interval_time <= " + endTimestamp + "\n");
+            query.append("      GROUP BY IntervalTime ORDER BY IntervalTime\n");
+
+        } else {
+
+			// Below is the original query which is too slow when querying all peers/prefixes.
+			//    This works fine when the dataset is smaller/filtered by peer/prefix.
+			query.append("SELECT from_unixtime(unix_timestamp(l.timestamp) - unix_timestamp(l.timestamp) % "
+					+ interval + ") as IntervalTime,\n");
+			query.append("               count(*) as Count\n");
+			query.append("      FROM path_attr_log l\n");
+			query.append("      WHERE l.timestamp >= " + startTimestamp + " AND l.timestamp <= " + endTimestamp + "\n");
+			if (searchPeer != null && searchPeer.length() > 0) {
+				query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
+			}
+			if (searchPrefix != null && searchPrefix.length() > 0) {
+				String[] prefix = searchPrefix.split("/");
+				query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
+				query.append("                     AND (prefix_len = " + prefix[1] + ")\n");
+			}
+			query.append("      GROUP BY IntervalTime\n");
+			query.append("      ORDER BY l.timestamp");
+		}
 
         System.out.println("QUERY: \n" + query.toString() + "\n");
 

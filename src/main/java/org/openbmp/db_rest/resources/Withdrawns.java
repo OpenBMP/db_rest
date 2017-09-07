@@ -304,24 +304,40 @@ public class Withdrawns {
 			startTimestamp="'" + startTimestamp + "'";
 
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT from_unixtime(unix_timestamp(l.timestamp) - unix_timestamp(l.timestamp) % " +
-				interval + ") as IntervalTime,\n");
-		query.append("               count(*) as Count\n");
-		query.append("      FROM withdrawn_log l\n");
-//		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
-//		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
-//		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
-		query.append("      WHERE l.timestamp >= "+startTimestamp +" AND l.timestamp <= " + endTimestamp + "\n");
-		if(searchPeer!=null && !searchPeer.isEmpty()) {
-			query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
+
+		if (searchPeer == null && searchPrefix == null) {
+			// Use aggregated stats for large query
+            query.append("SELECT from_unixtime(unix_timestamp(interval_time) - unix_timestamp(interval_time) % "
+                    + interval + ") as IntervalTime,\n");
+            query.append("               cast(sum(withdraws) as unsigned) as Count\n");
+            query.append("      FROM gen_chg_stats_bypeer\n");
+            query.append("      WHERE interval_time >= " + startTimestamp +
+                    " AND interval_time <= " + endTimestamp + "\n");
+            query.append("      GROUP BY IntervalTime ORDER BY IntervalTime\n");
 		}
-		if(searchPrefix!=null && !searchPrefix.isEmpty()) {
-			String[] prefix = searchPrefix.split("/");
-			query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
-			query.append("                     AND (prefix_len = " + prefix[1] + ")\n");
+		else {
+            // Below is the original query which is too slow when querying all peers/prefixes.
+            //    This works fine when the dataset is smaller/filtered by peer/prefix.
+
+			query.append("SELECT from_unixtime(unix_timestamp(l.timestamp) - unix_timestamp(l.timestamp) % " +
+					interval + ") as IntervalTime,\n");
+			query.append("               count(*) as Count\n");
+			query.append("      FROM withdrawn_log l\n");
+			//		query.append("      JOIN bgp_peers p ON (l.peer_hash_id = p.hash_id)\n");
+			//		query.append("      JOIN routers r ON (p.router_hash_id = r.hash_id)\n");
+			//		query.append("      JOIN collectors c ON (r.collector_hash_id = c.hash_id)\n");
+			query.append("      WHERE l.timestamp >= " + startTimestamp + " AND l.timestamp <= " + endTimestamp + "\n");
+			if (searchPeer != null && !searchPeer.isEmpty()) {
+				query.append("                     AND (peer_hash_id = \"" + searchPeer + "\")\n");
+			}
+			if (searchPrefix != null && !searchPrefix.isEmpty()) {
+				String[] prefix = searchPrefix.split("/");
+				query.append("                     AND (prefix = \"" + prefix[0] + "\")\n");
+				query.append("                     AND (prefix_len = " + prefix[1] + ")\n");
+			}
+			query.append("      GROUP BY IntervalTime\n");
+			query.append("      ORDER BY l.timestamp");
 		}
-		query.append("      GROUP BY IntervalTime\n");
-		query.append("      ORDER BY l.timestamp");
 
 		System.out.println("QUERY: \n" + query.toString() + "\n");
 

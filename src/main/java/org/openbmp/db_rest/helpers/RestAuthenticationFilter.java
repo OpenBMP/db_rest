@@ -41,6 +41,17 @@ public class RestAuthenticationFilter implements javax.servlet.Filter {
             } else {
                 String path = ((HttpServletRequest) request).getPathInfo();
                 boolean authenticationStatus;
+                System.out.println("Path = " + path);
+
+                /*
+                 * Ignore/skip paths that do not require auth
+                 */
+                if (path.startsWith("/events")) {
+                    System.out.println("No auth required for path");
+                    filter.doFilter(request, response);
+                    return;
+                }
+
                 if (!path.contains("/auth/login")) {
                     HttpServletRequest httpServletRequest = (HttpServletRequest) request;
                     String authCredentials = httpServletRequest
@@ -56,6 +67,10 @@ public class RestAuthenticationFilter implements javax.servlet.Filter {
                 if (!authenticationStatus) {
                     if (response instanceof HttpServletResponse) {
                         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+                        httpServletResponse.addHeader("Access-Control-Allow-Credentials", "true");
+                        httpServletResponse.addHeader("Access-Control-Allow-Headers", "Accept, Authorization");
+                        httpServletResponse.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, HEAD");
+                        httpServletResponse.addHeader("Access-Control-Allow-Origin", "*");
                         httpServletResponse
                                 .setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         // Allow the browser to prompt for user/pass using basic auth

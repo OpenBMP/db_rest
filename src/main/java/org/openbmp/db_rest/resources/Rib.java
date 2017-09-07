@@ -294,6 +294,12 @@ public class Rib {
         StringBuilder query = new StringBuilder();
 
         if (aggregate != null) {
+            if (prefix.contains(".")) {
+                query.append(" isIPv4 = 1 and ");
+            } else {
+                query.append(" isIPv4 = 0 and ");
+            }
+
             String ip_bits = IpAddr.getIpBits(prefix);
 
             query.append(" prefix_bits IN (");
@@ -356,6 +362,13 @@ public class Rib {
             length = 32;
 
         StringBuilder query = new StringBuilder();
+
+        if (prefix.contains(".")) {
+            query.append(" isIPv4 = 1 and ");
+        } else {
+            query.append(" isIPv4 = 0 and ");
+        }
+
         String ip_bits = IpAddr.getIpBits(prefix);
 
         if (aggregate != null) {
@@ -459,6 +472,12 @@ public class Rib {
 
             query = new StringBuilder();
 
+            if (ip.contains(".")) {
+                query.append(" isIPv4 = 1 and ");
+            } else {
+                query.append(" isIPv4 = 0 and ");
+            }
+
             if (agg != null) {
                 ip_bits = IpAddr.getIpBits(prefix);
 
@@ -545,6 +564,11 @@ public class Rib {
 
             } else {
 
+                if (ip.contains(".")) {
+                    query.append(" isIPv4 = 1 and ");
+                } else {
+                    query.append(" isIPv4 = 0 and ");
+                }
 
                 String ip_bits = IpAddr.getIpBits(prefix);
 

@@ -5,7 +5,7 @@
 		validationQuery="SELECT 1" testOnBorrow="true" testWhileIdle="true"
 		timeBetweenEvictionRunsMillis="1000" minEvictableIdleTimeMillis="60000"
 		logAbandoned="true"
-		username="openbmp" password="openbmp" url="jdbc:mariadb://localhost:3306/openBMP"
+		username="openbmp" password="openbmp" url="jdbc:mariadb://demo-rv-int.snas.io:3306/openBMP"
 		driverClassName="org.mariadb.jdbc.Driver"
 		factory="org.apache.tomcat.jdbc.pool.DataSourceFactory" />
 		<!--  factory="org.apache.tomcat.dbcp.dbcp.BasicDataSourceFactory"  /> -->

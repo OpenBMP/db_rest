@@ -46,7 +46,7 @@ public class RestAuthenticationFilter implements javax.servlet.Filter {
                 /*
                  * Ignore/skip paths that do not require auth
                  */
-                if (path.startsWith("/events")) {
+                if (path.startsWith("/events") || path.startsWith("/rib/as/trace")) {
                     System.out.println("No auth required for path");
                     filter.doFilter(request, response);
                     return;

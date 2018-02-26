@@ -24,8 +24,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Path("/rib")
 public class Rib {
@@ -422,6 +421,303 @@ public class Rib {
 
         return RestResponse.okWithBody(
                 DbUtils.selectStar_DbToJson(mysql_ds, "v_routes", limit, where_str, orderby));
+    }
+
+    private PrefixEntry findIP(String ip) {
+        PrefixEntry pEntry = new PrefixEntry();
+
+        StringBuilder query = new StringBuilder();
+
+        // Query for the best match based on prefix_bits (range query is too slow)
+        String ip_bits = IpAddr.getIpBits(ip);
+
+
+        query.append("SELECT prefix,prefix_len,prefix_bits,origin_as,if(as_name is null, org_id, as_name) as as_name\n");
+        query.append("    FROM rib\n");
+        query.append("         LEFT JOIN gen_whois_asn w ON (rib.origin_as = w.asn)\n");
+        query.append("    WHERE isWithdrawn = False AND \n");
+
+        if (ip.contains(":")) {
+            pEntry.isIPv4 = Boolean.FALSE;
+            query.append(" isIPv4 = 0 AND ");
+        } else {
+            pEntry.isIPv4 = Boolean.TRUE;
+            query.append(" isIPv4 = 1 AND ");
+        }
+
+        query.append("          prefix_bits IN (\n");
+
+        for (int len = ip_bits.length(); len > 0; len--) {
+            query.append("'" + ip_bits.substring(0, len) + "'");
+            if (len > 1) {
+                query.append(',');
+            }
+        }
+        query.append(") ");
+        query.append("        ORDER BY prefix_bin desc, prefix_len desc limit 1\n");
+
+        System.out.println("QUERY: \n" + query.toString() + "\n");
+
+        Map<String, List<DbColumnDef>> ResultsMap;
+
+        ResultsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+
+        if (ResultsMap.size() <= 0) {
+            // No results to return
+            return null;
+
+        } else {
+            pEntry.prefix = ResultsMap.entrySet().iterator().next().getValue().get(0).getValue();
+            pEntry.prefix_len = Integer.valueOf(ResultsMap.entrySet().iterator().next().getValue().get(1).getValue());
+            pEntry.prefix_bits = ResultsMap.entrySet().iterator().next().getValue().get(2).getValue();
+            pEntry.origin_asn = Long.valueOf(ResultsMap.entrySet().iterator().next().getValue().get(3).getValue());
+            pEntry.origin_name = ResultsMap.entrySet().iterator().next().getValue().get(4).getValue();
+        }
+
+        return pEntry;
+    }
+
+    @GET
+    @Path("/as/trace/ip/{SRC_IP}/{DST_IP}")
+    @Produces("text/plain")
+    public Response getIpAsTrace(@PathParam("SRC_IP") String src_ip,
+                                   @PathParam("DST_IP") String dst_ip) {
+
+        long startTime = System.currentTimeMillis();
+
+        PrefixEntry srcPrefix = findIP(src_ip);
+        PrefixEntry dstPrefix = findIP(dst_ip);
+
+        if (src_ip.equals(dst_ip)) {
+            return RestResponse.okWithBody("graph LR\n" +
+                                "    Error(<b>Error:</b> SOURCE and DEST cannot be the same)");
+        }
+
+        if (srcPrefix == null || dstPrefix == null) {
+            StringBuilder sb = new StringBuilder();
+
+            sb.append("graph LR\n");
+            if (srcPrefix == null)
+                sb.append("     Error(<b>Error:</b> Source prefix not found!)\n");
+
+            if (dstPrefix == null)
+                sb.append("     Error(<b>Error:</b> Destination prefix not found!)\n");
+
+            // No results to return
+            return RestResponse.okWithBody(sb.toString());
+
+        } else {
+            StringBuilder query = new StringBuilder();
+
+            query.append("SELECT DISTINCT as_path,if(prefix = \"" + srcPrefix.prefix + "\", 'A', 'B') as dir\n");
+            query.append("    FROM rib\n");
+            query.append("    JOIN path_attrs p ON (rib.path_attr_hash_id = p.hash_id and rib.peer_hash_id = p.peer_hash_id)\n");
+            query.append("    WHERE rib.isWithdrawn = False AND \n");
+
+            if (srcPrefix.isIPv4) {
+                query.append(" isIPv4 = 1 and ");
+            } else {
+                query.append(" isIPv4 = 0 and ");
+            }
+
+            query.append("( prefix_bits = \"" + srcPrefix.prefix_bits + "\" OR ");
+            query.append(" prefix_bits = \"" + dstPrefix.prefix_bits + "\")");
+
+            query.append("  ORDER BY dir");
+
+            System.out.println("QUERY: " + query.toString());
+
+            Map<String, List<DbColumnDef>> ResultsMap;
+
+            ResultsMap = DbUtils.select_DbToMap(mysql_ds, query.toString());
+
+            if (ResultsMap.size() <= 0) {
+                // No results to return
+                return RestResponse.okWithBody("");
+
+            } else {
+                boolean finishedSrc = false;
+
+                /*
+                 * Generate a source and dest unique asn list, this will be checked when adding links
+                 */
+                Set<Long> srcAsns = new TreeSet<>();
+                Set<Long> dstAsns = new TreeSet<>();
+
+                for (List<DbColumnDef> row : ResultsMap.values()) {
+                    String[] strs = row.get(0).getValue()
+                            .trim()
+                            .replaceAll("\\{.*\\}", "")
+                            .split("\\s+");
+
+                    if (row.get(1).getValue().equals("B"))
+                        finishedSrc = true;
+
+                        // add ASN to list
+                        for (int i = 0; i < strs.length; i++) {
+
+                            if (!finishedSrc) {
+                                srcAsns.add(Long.valueOf(strs[i]));
+                            } else {
+                                dstAsns.add(Long.valueOf(strs[i]));
+                            }
+                    }
+                }
+
+                /*
+                 * Render mermaid (https://mermaidjs.github.io/) result text for simple diagrams
+                 */
+                StringBuilder result = new StringBuilder();
+
+                result.append("graph LR\n");
+
+                /*
+                 * Build unique set of linked objects (remove the duplicates)
+                 */
+                Set<String> links = new LinkedHashSet<String>();
+                finishedSrc = false;
+
+                for (List<DbColumnDef> row: ResultsMap.values()) {
+                    boolean pathConnects = false;
+                    Set<String> pathLinks = new LinkedHashSet<>();
+
+                    String[] strs = row.get(0).getValue()
+                                            .trim()
+                                            .replaceAll("\\{.*\\}", "")
+                                            .split("\\s+");
+
+                    // Reverse the path if it's the destination
+                    if (row.get(1).getValue().equals("B")) {
+//                        String[] r_strs = new String[strs.length];
+//                        int i2 = 0;
+//                        for (int i=strs.length - 1; i >= 0; i--) {
+//                            r_strs[i2++] = strs[i];
+//                        }
+//                        strs = r_strs;
+
+                        finishedSrc = true;
+                    }
+
+                    /* Filter by path containing ASN */
+//                    if (!row.get(0).getValue().contains("16150"))
+//                        continue;
+
+                    // iterate over the path and add linked nodes
+                    String A = null;
+                    for (int i=0; i < strs.length; i++) {
+                        String asn = strs[i];
+
+                        // Path only connects if A & B contain at least one intersecting ASN
+                        if (!finishedSrc) {
+
+                            if (i == 0 && ! dstAsns.contains(Long.valueOf(asn))) {
+                                System.out.println("Peer ASN doesn't exist in destination, skipping: " + asn);
+                                continue;
+                            }
+
+                            if (dstAsns.contains(Long.valueOf(asn)))
+                                pathConnects = true;
+
+                        } else {
+
+                            if (srcAsns.contains(Long.valueOf(asn)))
+                                pathConnects = true;
+                        }
+
+                        if (A != null && ! A.equals(asn)) {
+                            StringBuilder sb = new StringBuilder();
+
+                            if (!finishedSrc) {
+                                sb.append("AS");
+                                sb.append(asn);
+                                sb.append(" --> AS");
+                                sb.append(A);
+                                sb.append(";\n");
+
+                                pathLinks.add(sb.toString());
+                            }
+                            else { // Reverse for destination
+
+                                sb.append("AS");
+                                sb.append(A);
+                                sb.append(" --> AS");
+                                sb.append(asn);
+                                sb.append(";\n");
+
+                                StringBuilder sb2 = new StringBuilder();
+                                sb2.append("AS");
+                                sb2.append(asn);
+                                sb2.append(" --> AS");
+                                sb2.append(A);
+                                sb2.append(";\n");
+
+                                if (links.contains(sb2.toString())) {
+                                    System.out.println("Path removing recursive path: " + sb.toString());
+                                    links.remove(sb2.toString());
+
+                                } else {
+                                    pathLinks.add(sb.toString());
+                                }
+                            }
+                        }
+
+                        A = asn;
+                    }
+
+                    if (pathConnects)
+                        links.addAll(pathLinks);
+                }
+
+                // SRC
+                result.append("SRC[");
+                result.append(srcPrefix.prefix);
+                result.append('/');
+                result.append(srcPrefix.prefix_len);
+                result.append("] --> \n");
+
+                result.append("AS");
+                result.append(srcPrefix.origin_asn);
+
+                if (srcPrefix.origin_name.length() > 0) {
+                    result.append("[");
+                    result.append("AS");
+                    result.append(srcPrefix.origin_asn);
+                    result.append(' ');
+                    result.append(srcPrefix.origin_name);
+                    result.append("];\n");
+                }
+
+                // DST
+                result.append("AS");
+                result.append(dstPrefix.origin_asn);
+
+                if (dstPrefix.origin_name.length() > 0) {
+                    result.append("[");
+                    result.append("AS");
+                    result.append(dstPrefix.origin_asn);
+                    result.append(' ');
+                    result.append(dstPrefix.origin_name);
+                    result.append("] --> \n");
+                }
+
+                result.append("DST[");
+                result.append(dstPrefix.prefix);
+                result.append('/');
+                result.append(dstPrefix.prefix_len);
+                result.append("];\n");
+
+
+                // Add unique set of links
+                for (String link: links) {
+                    result.append(link);
+                }
+
+
+                result.append("style SRC fill:#66ccff,stroke:#e0e0d1,stroke-width:2px,stroke-dasharray: 5, 5\n" +
+                              "style DST fill:#66ccff,stroke:#e0e0d1,stroke-width:2px,stroke-dasharray: 5, 5");
+                return RestResponse.okWithBody(result.toString());
+            }
+        }
     }
 
     @GET
@@ -854,6 +1150,23 @@ public class Rib {
         return RestResponse.okWithBody(DbUtils.DbMapToJson("asn_specifics", ResultsMap_specifics, System.currentTimeMillis() - startTime));
     }
 
+    private class PrefixEntry {
+        public String prefix;
+        public Integer prefix_len;
+        public String prefix_bits;
+        public Long origin_asn;
+        public String origin_name;
+        public Boolean isIPv4;
+
+        PrefixEntry() {
+            prefix      = null;
+            prefix_len  = 0;
+            prefix_bits = null;
+            origin_asn  = 0L;
+            origin_name = "";
+            isIPv4      = Boolean.TRUE;
+        }
+    }
 
     /**
      * Cleanup
